@@ -1,3 +1,5 @@
 commit:
-	podselect bin/vokab > README.pod
+	pod2markdown bin/vokab > README.md
+	sed -i -e "/^#/s/\([A-Z]\)\([A-Z]*\)/\1\L\2/g" README.md
+	git add README.md
 	git commit

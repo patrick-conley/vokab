@@ -1,9 +1,9 @@
-# NAME
+# Name
 
 vokab: A study tool for German vocabulary, using weighted (random?) selection
 of words.
 
-# INSTALLATION
+# Installation
 
 Installation is simple, but picky. Clone the repository with
 
@@ -12,7 +12,7 @@ Installation is simple, but picky. Clone the repository with
 and run the program `vokab/bin/vokab` The executable may be _symlinked_
 elsewhere for convenience.
 
-## DEPENDENCIES
+## Dependencies
 
 This program depends on the following Perl packages from CPAN:
 
@@ -25,7 +25,7 @@ This program depends on the following Perl packages from CPAN:
 along with the module `PConley::Log::Setup`, from
 [https://github.com/patrick-conley/Log-Handler-setup](https://github.com/patrick-conley/Log-Handler-setup).
 
-# DESCRIPTION
+# Description
 
 The German department has a website students can use to practise translating
 English words to German. It's flawed in a great number of ways, most notably
@@ -39,7 +39,7 @@ German translations. If the German is incorrect, the correct translation is
 shown. The score is computed based on the Wilson score; the selection criteria
 are described in detail in the internals docs: doc/word-selection.md
 
-# SYNOPSIS
+# Synopsis
 
 vokab \[--help\] \[--verbose|quiet\] \[options\]
 
