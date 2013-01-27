@@ -1,31 +1,31 @@
-=head1 NAME
+# NAME
 
 vokab: A study tool for German vocabulary, using weighted (random?) selection
 of words.
 
-=head1 INSTALLATION
+# INSTALLATION
 
 Installation is simple, but picky. Clone the repository with
 
-  git clone git@github.com:patrick-conley/vokab.git
+    git clone git@github.com:patrick-conley/vokab.git
 
-and run the program C<vokab/bin/vokab> The executable may be I<symlinked>
+and run the program `vokab/bin/vokab` The executable may be _symlinked_
 elsewhere for convenience.
 
-=head2 DEPENDENCIES
+## DEPENDENCIES
 
 This program depends on the following Perl packages from CPAN:
 
-  Log::Handler
-  Moose
-  MooseX::FollowPBP
-  Getopt::Long
-  Pod::Usage
+    Log::Handler
+    Moose
+    MooseX::FollowPBP
+    Getopt::Long
+    Pod::Usage
 
-along with the module C<PConley::Log::Setup>, from
-L<https://github.com/patrick-conley/Log-Handler-setup>.
+along with the module `PConley::Log::Setup`, from
+[https://github.com/patrick-conley/Log-Handler-setup](https://github.com/patrick-conley/Log-Handler-setup).
 
-=head1 DESCRIPTION
+# DESCRIPTION
 
 The German department has a website students can use to practise translating
 English words to German. It's flawed in a great number of ways, most notably
@@ -37,14 +37,14 @@ Vokab is an attempt to do better. When the program is launched, several words wi
 the highest scores are displayed in English, and the user must enter their
 German translations. If the German is incorrect, the correct translation is
 shown. The score is computed based on the Wilson score; the selection criteria
-are described in detail in the L<internals docs|doc/word-selection.md>.
+are described in detail in the internals docs: doc/word-selection.md
 
-=head1 SYNOPSIS
+# SYNOPSIS
 
-vokab [--help] [--verbose|quiet] [options]
+vokab \[--help\] \[--verbose|quiet\] \[options\]
 
- Options:
-   --help      print a brief help message and quit
-   --man       print the full program description and quit
-   --verbose   use verbose logging (give twice for more detail)
-   --quiet     silence all log output
+    Options:
+      --help      print a brief help message and quit
+      --man       print the full program description and quit
+      --verbose   use verbose logging (give twice for more detail)
+      --quiet     silence all log output

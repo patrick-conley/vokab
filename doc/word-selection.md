@@ -18,11 +18,11 @@ resulted in success and `z` is the quantile function,
 (Note that Wikipedia uses `erf⁻¹(2p-1)`; however, the Wilson score uses `z(1-α/2)`,
 (`α ≡ 1-p`), so it all cancels out.)
 
-![Wilson score](wilson-score.png)
+![Wilson score](wilson/wilson-score.png)
 
 The Wilson score interval only applies when results are statistically
-independent, which is not the case. Since this isn't a study on lanugage
-acquisition, though, I'll ignore that...
+independent, which is not the case. This isn't a study on language
+acquisition, though, so I'll ignore that...
 
 Confidence
 ==========
