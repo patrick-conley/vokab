@@ -1,3 +1,3 @@
 commit:
-	pod2text vokab > README
+	podselect bin/vokab > README.pod
 	git commit

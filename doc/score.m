@@ -7,13 +7,13 @@ p = 0.95;
 
 % compute the number of ratings at each coordinate
 for j = 1:n_max+1
-   pos(j,:) = (0:n_max);
-   pos(j+n_max,:) = (0:n_max); % this actually repeats a line; no matter
-   neg(:,j) = (0:2*n_max)';
+   neg(j,:) = (0:n_max);
+   neg(j+n_max,:) = (0:n_max); % this actually repeats a line; no matter
+   pos(:,j) = (0:2*n_max)';
 end
 
 num = pos .+ neg;
-phat = pos ./ num;
+phat = neg ./ num;
 
 % compute the score
 z = ( sqrt(2) * erfinv(p) ) .* ones(n_max*2+1,n_max+1);
@@ -24,13 +24,14 @@ score = ( phat + z.^2./2./num ...
 
 % plot the graph
 make_plot
-contour( num, pos, abs( score ), 0.1:0.1:1 )
- % plot( [ 0 20 ], [ 0 20 ], 'k' )
+contour( pos, neg, abs( score ), 0.1:0.1:0.9 )
+
+xlim( [ 0 n_max ] )
+ylim( [ 0 n_max ] )
 
 colorbar( 'EastOutside' )
-xlabel( 'positive' )
-ylabel( 'negative' )
-xlim( [ 0 40 ] )
-ylim( [ 0 20 ] )
+xlabel( 'positive ratings' )
+ylabel( 'negative ratings' )
+title( 'Wilson score' )
 
-print -depsc 'wilson-score.eps' 
+print -dpng 'wilson-score.png' 
