@@ -1,0 +1,101 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use utf8;
+
+use Getopt::Long;
+use Pod::Usage;
+use Log::Handler "vokab";
+use PConley::Log::Setup;
+use Gtk3 -init;
+
+# Cwd::abs_path should return ~/Docu/proj/curr/vokab/bin/vokab or similar
+# I want ~/Docu/proj/curr/vokab
+use Cwd;
+use lib Cwd::abs_path(__FILE__) =~ s!/[^/]*/[^/]*$!!r . "/lib";
+
+use Vokab::Item::Word::Verb;
+use Vokab::Item::Word::Noun;
+
+# Log::Handler object
+my $log = undef;
+
+# TODO: set global variables, variables for script arguments
+
+# Read & process the command line {{{
+my $log_verbosity = 0;
+
+GetOptions(
+   "help" => sub { pod2usage(1) }, # Print help/man message and abort
+   "man" => sub { pod2usage(-exitstatus => 0, -verbose => 2) },
+   "verbose+" => \$log_verbosity,
+) || pod2usage(2);
+
+# Set up the logger
+$log = PConley::Log::Setup::log_setup(
+   Log::Handler->create_logger("vokab"), verbosity => $log_verbosity );
+$log->debug( "Command-line arguments:" );
+$log->debug( "   " . "--verbose "x$log_verbosity ) if ( $log_verbosity > 0 );
+$log->debug( "   " . @ARGV ) if ( @ARGV );
+
+# }}}
+
+# TODO: Main
+
+$log->notice( "All done. Bye." );
+__END__
+
+{{{ POD
+
+=head1 NAME
+
+vokab: A study tool for German vocabulary, using weighted (random?) selection
+of words.
+
+=head1 INSTALLATION
+
+Installation is simple, but picky. Clone the repository with
+
+  git clone git@github.com:patrick-conley/vokab.git
+
+and run the program C<vokab/bin/vokab> The executable may be I<symlinked>
+elsewhere for convenience.
+
+=head2 DEPENDENCIES
+
+This program depends on the following Perl packages from CPAN:
+
+  Log::Handler
+  Term::ReadKey
+  Moose
+  MooseX::FollowPBP
+  Getopt::Long
+  Pod::Usage
+
+along with the module C<PConley::Log::Setup>, from
+L<https://github.com/patrick-conley/Log-Handler-setup>.
+
+=head1 DESCRIPTION
+
+The German department has a website students can use to practise translating
+English words to German. It's flawed in a great number of ways, most notably
+by using a static list of words to translate, which is repeated in the same
+order on every run: run a chapter more than a few times and you end up simply
+memorizing the order of the words, not learning them.
+
+Vokab is an attempt to do better. When the program is launched, several words with
+the highest scores are displayed in English, and the user must enter their
+German translations. If the German is incorrect, the correct translation is
+shown. The score is computed based on the Wilson score; the selection criteria
+are described in detail in the internals docs: doc/word-selection.md
+
+=head1 SYNOPSIS
+
+vokab [--help] [--verbose|quiet] [options]
+
+ Options:
+   --help      print a brief help message and quit
+   --man       print the full program description and quit
+   --verbose   use verbose logging (give twice for more detail)
+   --quiet     silence all log output
