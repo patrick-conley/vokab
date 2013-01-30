@@ -17,6 +17,7 @@ elsewhere for convenience.
 This program depends on the following Perl packages from CPAN:
 
     Log::Handler
+    Term::ReadKey
     Moose
     MooseX::FollowPBP
     Getopt::Long
