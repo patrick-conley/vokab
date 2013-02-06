@@ -20,7 +20,7 @@ has 'log' => ( is => 'ro',
 has 'id' => ( is => 'ro' );
 has 'type' => ( is => 'ro' );
 has 'chapter' => ( is => 'ro' );
-has 'section' => ( is => 'ro', isa => 'Vokab::Item::Word' );
+has 'section' => ( is => 'ro', isa => 'Vokab::Item::Word::Generic' );
 has 'tests' => ( is => 'rw' );
 has 'success' => ( is => 'rw' );
 has 'score' => ( is => 'rw' );
