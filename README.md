@@ -22,6 +22,7 @@ This program depends on the following Perl packages from CPAN:
     MooseX::FollowPBP
     Getopt::Long
     Pod::Usage
+    Gtk2
 
 along with the module `PConley::Log::Setup`, from
 [https://github.com/patrick-conley/Log-Handler-setup](https://github.com/patrick-conley/Log-Handler-setup).

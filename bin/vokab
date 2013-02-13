@@ -1,49 +1,333 @@
 #!/usr/bin/perl
 
+package Vokab;
+
+# Use declarations {{{1
 use strict;
 use warnings;
+ # use diagnostics;
+use English qw/ -no-match-vars /;
 use utf8;
 
-use Getopt::Long;
-use Pod::Usage;
 use Log::Handler "vokab";
 use PConley::Log::Setup;
-use Gtk3 -init;
+use Data::Dumper;
+local $Data::Dumper::Indent = 0;
+local $Data::Dumper::Varname = '';
+local $Data::Dumper::Terse = 1;
+local $Data::Dumper::Pad = " ";
+
+use Cwd;
+use Getopt::Long;
+use Params::Validate;
+use Pod::Usage;
+use Gtk2 -init;
+use DBI;
+
+# Global variables {{{1
 
 # Cwd::abs_path should return ~/Docu/proj/curr/vokab/bin/vokab or similar
 # I want ~/Docu/proj/curr/vokab
-use Cwd;
-use lib Cwd::abs_path(__FILE__) =~ s!/[^/]*/[^/]*$!!r . "/lib";
+my $Source_Path;
+BEGIN { $Source_Path = Cwd::abs_path(__FILE__) =~ s![^/]*/[^/]*$!!r; }
 
+my $Log = undef;                     # Log::Handler object
+my $Database_Name = "data/vokab.db"; # Local path to the DB
+my $Dbh = undef;                     # DB handle
+
+# Use declarations for Vokab::Item subclasses {{{1
+# NOTE: must declare global variables first!
+use lib "$Source_Path/lib";
 use Vokab::Item::Word::Verb;
 use Vokab::Item::Word::Noun;
+use Vokab::Item::Word::Generic;
 
-# Log::Handler object
-my $log = undef;
+# }}}1
 
-# TODO: set global variables, variables for script arguments
+# Function: add_items() {{{1
+# Purpose:  General handler for adding new Vokab::Items to the DB.
+#           Functionality may be relegated to smaller functions
+# Input:    N/A
+# Return:   N/A
+sub add_items
+{
+   $Log->notice( "Creating a window to add items to the DB" );
+
+   # Create a list of known item classes
+   # NB: selectall returns an arrayref of arrayrefs: one per row
+   my $item_classes = 
+      $Dbh->selectall_arrayref( "SELECT name, class FROM Types;" );
+   $Log->debug( "Vokab::Item active subclasses identified:\n" .
+      Data::Dumper::Dumper( @$item_classes ) );
+
+   # Item class selected last run
+   my $previous_item = undef;
+
+   # ComboBox to select the item type
+   my $combo = Gtk2::ComboBox->new();
+   my $item_list = Gtk2::ListStore->new( "Glib::String", "Glib::String" );
+   $item_list->set( $item_list->append(), 0 => $ARG->[0], 1 => $ARG->[1] ) foreach ( @$item_classes );
+   $combo->set_model( $item_list );
+   $combo->set_active_iter( $previous_item ) if ( defined $previous_item );
+
+   # Create the entry window, menus and main grid {{{2
+
+   my $window = Gtk2::Window->new();
+   $window->signal_connect(
+      destroy => sub { $Log->info( "Exiting" ); Gtk2->main_quit } );
+   $window->set_title( "Vokab - Add a new item" );
+
+   my $main_grid = Gtk2::VBox->new();
+   $main_grid->set_homogeneous( 0 );
+   $window->add( $main_grid );
+
+   create_menus( $window );
+
+   # First grid row: select appropriate Vokab::Item leaf class {{{2
+   my $row = Gtk2::HBox->new();
+   {
+      $main_grid->pack_start( $row, 0, 0, 0 );
+
+      # A box for the items
+      $row->pack_end( $combo, 0, 0, 0 );
+
+      my $renderer_text = Gtk2::CellRendererText->new();
+      $combo->pack_start( $renderer_text, 1 );
+      $combo->add_attribute( $renderer_text, "text", 0 );
+
+      # A label
+      $row->pack_end( Gtk2::Label->new( "Select the item's type:" ), 0, 1, 0 );
+   }
+
+   $window->show_all();
+
+   # Next rows: enter all data needed for a new item {{{2
+   my $item_frame = Gtk2::Frame->new();
+   {
+      $main_grid->add( $item_frame );
+
+      $combo->signal_connect(
+         changed => sub { set_item_class( 
+               frame => $item_frame,
+               prev => \$previous_item,
+               combo => $ARG[0] )
+         }
+      );
+   }
+
+   # Last row: 'submit' button (not shown right away) {{{2
+   # NB: $window->show_all() shouldn't be called after this row is drawn: it's
+   # not shown unless an item class is selected
+   my $submit = Gtk2::Button->new_with_label( "Submit" );
+   {
+      $main_grid->pack_end( $submit, 0, 0, 0 );
+      $submit->signal_connect( clicked => \&submit_item );
+   }
+
+   # }}}2
+
+   Gtk2->main();
+}
+
+# Callback: set_item_class() {{{1
+# Purpose:  Create and display a new VBox for item entry fields. Acts as a
+#           wrapper to set_item_entry_fields() to limit the amount of scope
+#           shared.
+# Input:    (frame => Gtk::Container) A container to hold the VBox to
+#           hold entry fields
+#           TODO: make that a frame; add or replace the VBox here
+#           (prev => ptr to Gtk::TreeIter) Saved copy of the class of the
+#           previously-selected item
+#           (combo => Gtk::ComboBox) Selector box for item classes
+sub set_item_class
+{
+   my %args = Params::Validate::validate( @_, {
+         frame => { isa => "Gtk2::Container" },
+         prev => { type => Params::Validate::SCALARREF },
+         combo => { isa => "Gtk2::ComboBox" }
+      }
+   );
+
+   # Identify the selected class {{{2
+   my $selected_class = $args{combo}->get_active_iter();
+   defined $selected_class or $Log->die( "No item class is selected. Can't happen?" );
+
+   my $model = $args{combo}->get_model();
+   my $class = $model->get( $selected_class, 1 );
+   $Log->info( "Selected an item of class "
+      . $class . " with name " . $model->get( $selected_class, 0 ) );
+
+   ${$args{previous}} = $selected_class;
+
+   # Reset the box to put items in {{{2
+   my ( $box ) = $args{frame}->get_children();
+   if ( defined $box )
+   {
+      $Log->debug( "Removing old item entry box" );
+      $args{frame}->remove( $box );
+   }
+   $box = Gtk2::VBox->new();
+   $args{frame}->add( $box );
+
+   # }}}2
+
+   # Create an object and display its entry fields
+   display_item_entry_box( class => $class, box => $box );
+   $args{frame}->get_parent->show_all(); # Must show 'submit' button of parent
+}
+
+# Function: display_item_entry_box() {{{1
+# Purpose:  Draw the rest of the window once a class has been selected
+# Input:    (box => Gtk::VBox) A box to draw entry fields in
+#           (class => Vokab::Item) type of item to create.
+sub display_item_entry_box 
+{
+   my %args = @ARG;
+
+   $Log->info( "Displaying entry window for a " . $args{class} );
+
+   my $item = $args{class}->new( dbh => $Dbh );
+   $item->display_all( box => $args{box} );
+}
+
+# Callback: submit_entered_item() {{{1
+# Purpose:  When a new item's data has been entered, validate and write it.
+# Input:    ??
+sub submit_item
+{
+}
+
+# }}}1
+
+# Handler:  handle_db_exceptions() {{{1
+# Purpose:  A common error-handler for all DB-interacting GUIs. Display an
+#           error message and quit.
+# Input:    (string) error message
+#           (object) DB handle
+sub handle_db_exceptions
+{
+   my $msg = shift;
+
+   my $window = Gtk2::MessageDialog->new(
+      undef, "destroy_with_parent", "GTK_MESSAGE_ERROR",
+      "close", "The Vokab DB threw exception:\n %s", $msg );
+   $window->run();
+   $window->destroy();
+
+   Gtk2->main_quit();
+
+   $Log->alert( "DB threw exception: $msg" );
+}
+
+# Handler:  handle_ui_exceptions() {{{1
+# Purpose:  A common error-handler for Gtk objects
+# Input:    $@
+sub handle_ui_exceptions
+{
+   my $msg = shift;
+
+   my $window_msg = $msg =~ s/\n.*//sr;
+
+   my $window = Gtk2::MessageDialog->new(
+      undef,"destroy_with_parent", "GTK_MESSAGE_ERROR",
+      "close", "Gtk threw an exception:\n %s", $window_msg );
+   $window->run();
+   $window->destroy();
+
+   Gtk2->main_quit();
+
+   $Log->alert( "Gtk threw an exception: $msg" );
+}
+
+# Function: create_menus() {{{1
+# Purpose:  Create a menu and set some accelerators
+# Input:    (Gtk2::Window) window object
+# Return:   N/A
+sub create_menus
+{
+   my $window = shift;
+
+   $Log->info( "Setting up menus for a window named '" . $window->get_title() . "'" );
+
+   my $ui_info = "
+   <ui>
+      <menubar name='MenuBar'>
+         <menu action='FileMenu'>
+            <menuitem action='Quit'/>
+         </menu>
+      </menubar>
+   </ui>";
+
+   my $actions = Gtk2::ActionGroup->new('Actions');
+   $actions->add_actions( [
+         [ 'FileMenu', undef, 'File' ],
+         [ 'Quit', 'gtk-quit', 'Quit', '<control>Q', 'Quit the program',
+            sub { Gtk2->main_quit } ] ] );
+
+   my $ui = Gtk2::UIManager->new();
+   $ui->insert_action_group( $actions, 0 );
+   $ui->add_ui_from_string( $ui_info );
+
+   $window->add_accel_group( $ui->get_accel_group );
+   $window->get_child->add( $ui->get_widget( '/MenuBar' ) );
+
+}
+
+
+# }}}1
 
 # Read & process the command line {{{
-my $log_verbosity = 0;
+my $Log_verbosity = 0;
 
 GetOptions(
-   "help" => sub { pod2usage(1) }, # Print help/man message and abort
-   "man" => sub { pod2usage(-exitstatus => 0, -verbose => 2) },
-   "verbose+" => \$log_verbosity,
+   "help"       => sub { pod2usage(1) }, # Print help/man message and abort
+   "man"        => sub { pod2usage(-exitstatus => 0, -verbose=> 2) },
+   "verbose+"   => \$Log_verbosity,
+   "quiet"      => sub { $Log_verbosity = -1 },
+   "database=s" => \$Database_Name,
 ) || pod2usage(2);
 
 # Set up the logger
-$log = PConley::Log::Setup::log_setup(
-   Log::Handler->create_logger("vokab"), verbosity => $log_verbosity );
-$log->debug( "Command-line arguments:" );
-$log->debug( "   " . "--verbose "x$log_verbosity ) if ( $log_verbosity > 0 );
-$log->debug( "   " . @ARGV ) if ( @ARGV );
+$Log = PConley::Log::Setup::log_setup(
+   Log::Handler->create_logger("vokab"), verbosity => $Log_verbosity );
+$Log->debug( "Command-line arguments:" );
+$Log->debug( "   " . "--verbose "x$Log_verbosity ) if ( $Log_verbosity > 0 );
+$Log->debug( "   " . "--database=" . $Database_Name );
+$Log->debug( "   " . "@ARGV" ) if ( @ARGV );
 
 # }}}
 
-# TODO: Main
+# Main {{{
 
-$log->notice( "All done. Bye." );
+# Open a connection to the DB
+$Dbh = DBI->connect( "dbi:SQLite:dbname=$Source_Path/$Database_Name",
+   "", "", {
+      RaiseError => 1,
+      HandleError => \&handle_db_exceptions,
+      AutoCommit => 1,
+   } ) or $Log->alert( $DBI::errstr );
+
+# Set an error handler for Gtk
+Glib->install_exception_handler( \&handle_ui_exceptions );
+
+if ( @ARGV == 0 )
+{
+   $Log->error( "Haven't written quiz behaviour yet" );
+}
+elsif ( $ARGV[0] eq "add" )
+{
+   add_items();
+}
+else
+{
+   $Log->error( "Unknown argument $ARGV[0]" );
+}
+
+# }}}
+
+$Dbh->disconnect();
+$Log->notice( "All done. Bye." );
+
 __END__
 
 {{{ POD
@@ -72,6 +356,7 @@ This program depends on the following Perl packages from CPAN:
   MooseX::FollowPBP
   Getopt::Long
   Pod::Usage
+  Gtk2
 
 along with the module C<PConley::Log::Setup>, from
 L<https://github.com/patrick-conley/Log-Handler-setup>.
