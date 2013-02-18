@@ -53,8 +53,8 @@ sub create_menus
    my $actions = Gtk2::ActionGroup->new('Actions');
    $actions->add_actions( [
          [ 'FileMenu', undef, 'File' ],
-         [ 'Quit', 'gtk-quit', 'Quit', '<control>Q', 'Quit the program',
-            sub { Gtk2->main_quit } ] ] );
+         [ 'Quit', 'gtk-quit', 'Quit', '<control>Q', 'Quit the program', \&destroy ]
+      ] );
 
    my $ui = Gtk2::UIManager->new();
    $ui->insert_action_group( $actions, 0 );
@@ -64,5 +64,14 @@ sub create_menus
    $window->get_child->pack_start( $ui->get_widget( '/MenuBar' ), 0, 0, 0 );
 }
 
+# Callback: destroy() {{{1
+# Purpose:  Cleanly quit the program.
+sub destroy
+{
+   $Log->info( "Exiting" );
+   Gtk2->main_quit();
+}
+
 # }}}1
 
+1;

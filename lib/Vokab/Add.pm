@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use English qw/ -no-match-vars /;
 use utf8;
+use feature 'state';
 
 # A package with functions to add new items to the DB. It is not a class; it
 # merely provides some encapsulation of the script's functionality.
@@ -11,7 +12,7 @@ use utf8;
 use Gtk2;
 use Log::Handler 'vokab';
 use Cwd;
-use feature 'state';
+use Params::Validate;
 
 require Exporter;
 our @ISA = qw/ Exporter /;
@@ -19,15 +20,13 @@ our @EXPORT_OK = qw/ run /;
 
 # Global variables {{{1
 my $Source_Path;
-BEGIN { $Source_Path = Cwd::abs_path(__FILE__); }
+BEGIN { $Source_Path = Cwd::abs_path(__FILE__) =~ s![^/]*$!!r; }
 
 my $Log = Log::Handler->get_logger( "vokab" );
 my $Saved_Item = undef;
-my $Dbh = undef;
+my $DB = undef;
 
 # Use declarations for Vokab classes {{{1
-use lib $Source_Path;
-
 use lib "$Source_Path";
 use Vokab::DB;
 use Vokab::UI;
@@ -45,14 +44,14 @@ use Vokab::Item::Word::Generic;
 # Return:   (bool) Success
 sub set_item
 {
-   state @validation_spec = ( 
+   state $validation_spec = [ 
       {
          type => Params::Validate::OBJECT,
          isa => 'Vokab::Item',
       }
-   );
+   ];
 
-   ( $Saved_Item ) = Params::Validate::validate_pos( @_, @validation_spec );
+   ( $Saved_Item ) = Params::Validate::validate_pos( @_, @$validation_spec );
 }
 
 # Function: get_item() {{{1
@@ -60,8 +59,7 @@ sub set_item
 #           undef
 sub get_item
 {
-   defined $Saved_Item
-      or $Log->warning( "Trying to access an undefined Item" );
+   has_item() or $Log->warning( "Trying to access an undefined Item" );
 
    return $Saved_Item;
 }
@@ -79,39 +77,37 @@ sub has_item { return defined $Saved_Item }
 # Return:   N/A
 sub run
 {
-   $Dbh = Vokab::DB->new( shift );
+   $DB = Vokab::DB->new( dbname => shift );
    
    $Log->notice( "Creating a window to add items to the DB" );
 
    # Create a list of known item classes
-   # NB: selectall returns an arrayref of arrayrefs: one per row
-   my $item_classes = 
-   my $item_classes = $Dbh->getall_item_types();
+   my $item_classes = $DB->readall_item_types();
    $Log->debug( "Vokab::Item active subclasses identified:\n" .
       Data::Dumper::Dumper( @$item_classes ) );
 
-   # Item class selected last run
+   # Last item class selected
    my $previous_item = undef;
 
-   # ComboBox to select the item type
+   # Create a ComboBox to select the item type {{{2
    my $combo = Gtk2::ComboBox->new();
    my $item_list = Gtk2::ListStore->new( "Glib::String", "Glib::String" );
    $item_list->set( $item_list->append(), 0 => $ARG->[0], 1 => $ARG->[1] ) foreach ( @$item_classes );
    $combo->set_model( $item_list );
    $combo->set_active_iter( $previous_item ) if ( defined $previous_item );
 
-   # Create the entry window, menus and main grid {{{2
+   # Draw the entry window, menus and main grid {{{2
 
    my $window = Gtk2::Window->new();
    $window->signal_connect(
-      destroy => sub { $Log->info( "Exiting" ); Gtk2->main_quit } );
+      destroy => \&Vokab::UI::destroy );
    $window->set_title( "Vokab - Add a new item" );
 
    my $main_grid = Gtk2::VBox->new();
    $main_grid->set_homogeneous( 0 );
    $window->add( $main_grid );
 
-   create_menus( $window );
+   Vokab::UI::create_menus( $window );
 
    # First grid row: select appropriate Vokab::Item leaf class {{{2
    my $row = Gtk2::HBox->new();
@@ -137,7 +133,7 @@ sub run
       $main_grid->pack_start( $item_frame, 0, 0, 0 );
 
       $combo->signal_connect(
-         changed => sub { set_item_class( 
+         changed => sub { on_set_item_class( 
                frame => $item_frame,
                prev => \$previous_item,
                combo => $ARG[0] )
@@ -159,17 +155,13 @@ sub run
    Gtk2->main();
 }
 
-# Callback: set_item_class() {{{1
+# Callback: on_set_item_class() {{{1
 # Purpose:  Create and display a new VBox for item entry fields. Acts as a
 #           wrapper to set_item_entry_fields() to limit the amount of scope
 #           shared.
 # Input:    (frame => Gtk::Container) A container to hold the VBox to
 #           hold entry fields
-#           TODO: make that a frame; add or replace the VBox here
-#           (prev => ptr to Gtk::TreeIter) Saved copy of the class of the
-#           previously-selected item
-#           (combo => Gtk::ComboBox) Selector box for item classes
-sub set_item_class
+sub on_set_item_class
 {
    my %args = Params::Validate::validate( @_, {
          frame => { isa => "Gtk2::Container" },
@@ -202,25 +194,25 @@ sub set_item_class
    # }}}2
 
    # Create an object and display its entry fields
-   display_item_entry_box( class => $class, box => $box );
+   draw_item_entry_box( class => $class, box => $box );
    $args{frame}->get_parent->show_all(); # Must show 'submit' button of parent
 }
 
-# Function: display_item_entry_box() {{{1
+# Function: draw_item_entry_box() {{{1
 # Purpose:  Draw the rest of the window once a class has been selected
 # Input:    (box => Gtk::VBox) A box to draw entry fields in
 #           (class => Vokab::Item) type of item to create.
-sub display_item_entry_box 
+sub draw_item_entry_box 
 {
    my %args = @ARG;
 
    $Log->info( "Displaying entry window for a " . $args{class} );
 
-   my $item = $args{class}->new( dbh => $Dbh );
+   my $item = $args{class}->new( dbh => $DB );
    $item->display_all( box => $args{box} );
 }
 
-# Callback: submit_entered_item() {{{1
+# Callback: on_submit_item() {{{1
 # Purpose:  When a new item's data has been entered, validate and write it.
 # Input:    ??
 sub submit_item
@@ -229,3 +221,4 @@ sub submit_item
 
 # }}}1
 
+1;

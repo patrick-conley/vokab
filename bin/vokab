@@ -6,7 +6,7 @@ use warnings;
 use English qw/ -no-match-vars /;
 use utf8;
 
-use Log::Handler "vokab";
+use Log::Handler 'vokab';
 use PConley::Log::Setup;
 use Data::Dumper;
 local $Data::Dumper::Indent = 0;
@@ -16,20 +16,16 @@ local $Data::Dumper::Pad = " ";
 
 use Cwd;
 use Getopt::Long;
-use Params::Validate;
 use Pod::Usage;
 use Gtk2 -init;
-use DBI;
 
 # Cwd::abs_path should return ~/Docu/proj/curr/vokab/bin/vokab or similar
 # I want ~/Docu/proj/curr/vokab
 my $Source_Path;
-BEGIN { $Source_Path = Cwd::abs_path(__FILE__) =~ s![^/]*/[^/]*$!!r; }
+BEGIN { $Source_Path = Cwd::abs_path(__FILE__) =~ s!/[^/]*/[^/]*$!!r; }
 
 use lib "$Source_Path/lib";
 use Vokab::Add;
-use Vokab::DB;
-use Vokab::UI;
 
 # Global variables {{{1
 
@@ -63,7 +59,7 @@ $Log->debug( "   " . "@ARGV" ) if ( @ARGV );
 # Main {{{
 
 # Set an error handler for Gtk
-Glib->install_exception_handler( Vokab::U::handle_ui_exceptions );
+Glib->install_exception_handler( \&Vokab::UI::handle_ui_exceptions );
 
 if ( @ARGV == 0 )
 {

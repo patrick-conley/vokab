@@ -29,9 +29,9 @@ augment display_all => sub
    );
 
    # NOTE: hacks follow. Vokab::Item::Word creates a single VBox containing
-   # the En/De fields;
-   # A comment on the field contents should be added to the right
-   # The gender should be added below
+   # the En/De fields:
+   # Add a new VBox with a comment on the contents of En/De; add the gender
+   # below
 
    # Append a comment to the language row
    my @item_rows = $args{box}->get_children();

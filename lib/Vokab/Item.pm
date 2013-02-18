@@ -21,10 +21,11 @@ has 'log' => ( is => 'ro', # Log::Handler object for debugging output
                init_arg => undef, # don't allow this to be set with new()
                isa => 'Log::Handler'
              );
+
 has 'dbh' => ( is => 'ro', # Database handler
                reader => 'dbh',
                required => 1,
-               isa => 'DBI::db'
+               isa => 'Vokab::DB'
              );
 
 has 'id' => ( is => 'rw' );
