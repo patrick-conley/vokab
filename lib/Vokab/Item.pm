@@ -2,7 +2,7 @@ package Vokab::Item;
 
 use strict;
 use warnings;
-use English;
+use English qw/ -no-match-vars/;
 use utf8;
 
 # A Vokab::Item is meant to be used for any testable object.
@@ -19,7 +19,6 @@ has 'log' => ( is => 'ro', # Log::Handler object for debugging output
                reader => 'log',   # override Moose::FollowPBP
                lazy => 1,         # don't set it until used
                init_arg => undef, # don't allow this to be set with new()
-               required => 1,
                isa => 'Log::Handler'
              );
 has 'dbh' => ( is => 'ro', # Database handler
@@ -57,32 +56,45 @@ sub display_all
       # Col: Label
       my $col = Gtk2::VBox->new();
       {
-         $table->add( $col );
-         $col->add( Gtk2::Label->new( "Section " ) );
+         $table->pack_start( $col, 0, 0, 0 );
+         $col->set_homogeneous( 0 );
+         $col->add( Gtk2::Label->new( "Chapter" ) );
+         $col->add( Gtk2::Label->new( "Section" ) );
       }
 
       # Col: Section entry
       $col = Gtk2::VBox->new();
       {
-         $table->add( $col );
+         $table->pack_start( $col, 0, 0, 0 );
+         $col->set_homogeneous( 0 );
+
+         my $row = Gtk2::HBox->new();
+         {
+            $col->add( $row );
+            my $chapter_field = Gtk2::SpinButton->new_with_range( 0, 100, 1 );
+            $row->pack_start( $chapter_field, 0, 0, 0 );
+         }
+
          my $section_field = Gtk2::Entry->new();
          $col->add( $section_field );
       }
 
-      # Col: comments
       $col = Gtk2::VBox->new();
-      {
-         $table->add( $col );
+      $table->add( $col );
 
-         my $row = Gtk2::HBox->new();
-         {
-            $col->pack_start( $row, 0, 0, 0 );
+   }
 
-            $row->add( Gtk2::Label->new( "Chapter" ) );
-            my $chapter_field = Gtk2::SpinButton->new_with_range( 0, 100, 1 );
-            $row->pack_end( $chapter_field, 0, 0, 0 );
-         }
-      }
+   $args{box}->pack_start( Gtk2::HSeparator->new(), 0, 0, 0 );
+
+   # children's table
+   $table = Gtk2::HBox->new();
+   {
+      $args{box}->add( $table );
+      $table->set_homogeneous( 0 );
+      
+      $table->pack_start( Gtk2::VBox->new(), 0, 0, 0 );
+      $table->pack_start( Gtk2::VBox->new(), 0, 0, 0 );
+      $table->pack_start( Gtk2::VBox->new(), 0, 0, 0 );
    }
 
    inner();

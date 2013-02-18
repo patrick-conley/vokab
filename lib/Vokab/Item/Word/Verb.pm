@@ -39,77 +39,53 @@ augment display_all => sub
       my $col = Gtk2::VBox->new();
       {
          $conj_row->add( $col );
-         $col->add( Gtk2::Label->new( "" ) ); # blank line
-         $col->add( Gtk2::Label->new( "1st person" ) );
-         $col->add( Gtk2::Label->new( "2nd informal" ) );
-         $col->add( Gtk2::Label->new( "3rd person" ) );
-         $col->add( Gtk2::Label->new( "2nd formal" ) );
+         $col->add( Gtk2::Label->new( "ich" ) );
+         $col->add( Gtk2::Label->new( "du" ) );
+         $col->add( Gtk2::Label->new( "er" ) );
+         $col->add( Gtk2::Label->new( "Sie" ) );
       }
 
       $col = Gtk2::VBox->new();
       {
          $conj_row->add( $col );
-         $col->add( Gtk2::Label->new( "singular" ) );
 
-         my $row = Gtk2::HBox->new();
-         {
-            $col->add( $row );
-            $people[0] = Gtk2::Entry->new();
-            $row->add( $people[0] );
-         }
+         $people[0] = Gtk2::Entry->new();
+         $col->pack_start( $people[0], 0, 0, 0 );
 
-         $row = Gtk2::HBox->new();
-         {
-            $col->add( $row );
-            $people[1] = Gtk2::Entry->new();
-            $row->add( $people[1] );
-         }
+         $people[1] = Gtk2::Entry->new();
+         $col->pack_start( $people[1], 0, 0, 0 );
 
-         $row = Gtk2::HBox->new();
-         {
-            $col->add( $row );
-            $people[2] = Gtk2::Entry->new();
-            $row->add( $people[2] );
-         }
+         $people[2] = Gtk2::Entry->new();
+         $col->pack_start( $people[2], 0, 0, 0 );
 
-         $row = Gtk2::HBox->new();
-         {
-            $col->add( $row );
-            $people[3] = Gtk2::Entry->new();
-            $row->add( $people[3] );
-         }
+         $people[3] = Gtk2::Entry->new();
+         $col->pack_start( $people[3], 0, 0, 0 );
       }
 
       $col = Gtk2::VBox->new();
       {
          $conj_row->add( $col );
-         $col->add( Gtk2::Label->new( "plural" ) );
 
-         my $row = Gtk2::HBox->new();
-         {
-            $col->add( $row );
-            $people[4] = Gtk2::Entry->new();
-            $row->add( $people[4] );
-         }
+         $people[4] = Gtk2::Entry->new();
+         $col->pack_start( $people[4], 0, 0, 0 );
 
-         $row = Gtk2::HBox->new();
-         {
-            $col->add( $row );
-            $people[5] = Gtk2::Entry->new();
-            $row->add( $people[5] );
-         }
+         $people[5] = Gtk2::Entry->new();
+         $col->pack_start( $people[5], 0, 0, 0 );
 
-         $row = Gtk2::HBox->new();
-         {
-            $col->add( $row );
-            $people[6] = Gtk2::Entry->new();
-            $row->add( $people[6] );
-         }
+         $people[6] = Gtk2::Entry->new();
+         $col->pack_start( $people[6], 0, 0, 0 );
 
-         $row = Gtk2::HBox->new();
-         $row->add( Gtk2::Label->new( "" ) );
-         $col->add( $row );
       }
+
+      $col = Gtk2::VBox->new();
+      {
+         $conj_row->add( $col );
+         $col->add( Gtk2::Label->new( "wir" ) );
+         $col->add( Gtk2::Label->new( "ihr" ) );
+         $col->add( Gtk2::Label->new( "sie" ) );
+         $col->add( Gtk2::Label->new( "" ) );
+      }
+
    }
 };
 

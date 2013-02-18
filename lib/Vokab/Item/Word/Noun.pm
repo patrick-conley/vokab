@@ -2,7 +2,7 @@ package Vokab::Item::Word::Noun;
 
 use strict;
 use warnings;
-use English;
+use English qw/ -no-match-vars/;
 use utf8;
 
 # A Vokab::Item::Word::Noun is a noun. It will ordinarilly have a specified
@@ -54,9 +54,8 @@ augment display_all => sub
    }
 
    # Col: Comment
-   $table[2]->pack_start( Gtk2::Label->new( 
-         "Don't include any article\n('the', 'der', 'die', or 'das')" ),
-      0, 1, 0
+   $table[2]->add( Gtk2::Label->new( 
+         "Don't include any article\n('the', 'der', 'die', or 'das')" )
    );
 
    inner();
