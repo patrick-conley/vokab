@@ -12,8 +12,10 @@ Methods
 
 * `->new()`: instantiate an object with no attributes set. Can be called with
   attributes wherever appropriate.
+* `->dump()`: return a hash of all writable attributes
 * `->display_all( $window )`: add row(s) to the `$window` containing entries
-  querying a user to input values for the item's attributes.
+  querying a user to input values for the item's attributes. If any attributes
+  are already set, they should be displayed as defaults
 * `->set_all()`: Set the attributes after they're submitted.
 * `->write()`: write this class's attributes to the corresponding table in the
   DB.  Throws an exception if the insert fails

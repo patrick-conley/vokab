@@ -14,27 +14,62 @@ use Moose;
 use MooseX::FollowPBP; # use get_, set_ accessors
 use namespace::autoclean; # clean up Moose droppings
 
-has 'log' => ( is => 'ro', # Log::Handler object for debugging output
-               default => sub { return Log::Handler->get_logger("vokab"); },
-               reader => 'log',   # override Moose::FollowPBP
-               lazy => 1,         # don't set it until used
-               init_arg => undef, # don't allow this to be set with new()
-               isa => 'Log::Handler'
-             );
+has 'log' => (
+   is => 'ro', # Log::Handler object for debugging output
+   default => sub { return Log::Handler->get_logger("vokab"); },
+   reader => 'log',   # override Moose::FollowPBP
+   lazy => 1,         # don't set it until used
+   init_arg => undef, # don't allow this to be set with new()
+   isa => 'Log::Handler'
+);
 
-has 'dbh' => ( is => 'ro', # Database handler
-               reader => 'dbh',
-               required => 1,
-               isa => 'Vokab::DB'
-             );
+has 'dbh' => (
+   is => 'ro', # Database handler
+   reader => 'dbh',
+   required => 1,
+   isa => 'Vokab::DB'
+);
 
-has 'id' => ( is => 'rw' );
-has 'class' => ( is => 'rw' );
-has 'chapter' => ( is => 'rw' );
-has 'section' => ( is => 'rw' );
-has 'tests' => ( is => 'rw' );
-has 'success' => ( is => 'rw' );
-has 'score' => ( is => 'rw' );
+has 'id' => ( is => 'rw', isa => 'Int' );
+has 'class' => ( is => 'rw', isa => 'ClassName' );
+has 'tests' => ( is => 'rw', isa => 'Int' );
+has 'success' => ( is => 'rw', isa => 'Int' );
+has 'score' => ( is => 'rw', isa => 'Num' );
+
+has 'chapter' => ( is => 'rw', isa => 'Int' );
+has 'section' => ( is => 'rw', isa => 'Str' );
+
+foreach my $field ( qw/ chapter section / )
+{
+   has $field . "_field" => (
+      is => 'rw',
+      lazy => 1,
+      builder => "_init_${field}_field",
+      init_arg => undef,
+   );
+}
+
+# Method:   _init_chapter_field {{{1
+# Purpose:  Builder for the chapter_field attribute
+sub _init_chapter_field
+{
+   my $self = shift;
+
+   my $entry = Gtk2::SpinButton->new_with_range( 0, 100, 1 );
+   $entry->set_value( $self->get_chapter ) if $self->get_chapter;
+   return $entry;
+}
+
+# Method:   _init_section_field {{{1
+# Purpose:  Builder for the section_field attribute
+sub _init_section_field
+{
+   my $self = shift;
+
+   my $entry = Gtk2::Entry->new();
+   $entry->set_text( $self->get_section ) if $self->get_section;
+   return $entry;
+}
 
 # Method:   display_all( box => $box ) {{{1
 # Purpose:  Display entry fields for everything the item needs
@@ -48,7 +83,7 @@ sub display_all
       }
    );
 
-   # Table: Section + various children
+   # Table: Chapter & section
    my $table = Gtk2::HBox->new();
    {
       $args{box}->add( $table );
@@ -63,21 +98,20 @@ sub display_all
          $col->add( Gtk2::Label->new( "Section" ) );
       }
 
-      # Col: Section entry
+      # Col: Entry fields
       $col = Gtk2::VBox->new();
       {
          $table->pack_start( $col, 0, 0, 0 );
          $col->set_homogeneous( 0 );
 
+         # Must create a row to limit the width of the chapter entry field
          my $row = Gtk2::HBox->new();
          {
             $col->add( $row );
-            my $chapter_field = Gtk2::SpinButton->new_with_range( 0, 100, 1 );
-            $row->pack_start( $chapter_field, 0, 0, 0 );
+            $row->pack_start( $self->get_chapter_field, 0, 0, 0 );
          }
 
-         my $section_field = Gtk2::Entry->new();
-         $col->add( $section_field );
+         $col->add( $self->get_section_field );
       }
 
       $col = Gtk2::VBox->new();
@@ -99,6 +133,37 @@ sub display_all
    }
 
    inner();
+}
+
+# Method:   set_all() {{{1
+# Purpose:  Set attributes according to the values in entry fields
+sub set_all
+{
+   my $self = shift;
+
+   $self->set_chapter( $self->get_chapter_field()->get_value_as_int() );
+   $self->set_section( $self->get_section_field()->get_text() );
+   $self->set_tests( 0 );
+   $self->set_success( 0 );
+   $self->set_score( 0.8 );
+
+   inner();
+}
+
+# Method:   dump() {{{1
+# Purpose:  Return a hash of the object's writable attributes
+sub dump
+{
+   my $self = shift;
+
+   my %attrs;
+   $attrs{chapter} = $self->get_chapter if $self->get_chapter;
+   $attrs{section} = $self->get_section if $self->get_section;
+
+   return (
+      %attrs,
+      inner()
+   );
 }
 
 # }}}1

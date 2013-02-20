@@ -13,9 +13,52 @@ use utf8;
 use Moose;
 extends 'Vokab::Item';
 
-has 'en' => ( is => 'rw' );
-has 'de' => ( is => 'rw' );
-has 'match' => ( is => 'rw' );
+has 'en'        => ( is => 'rw', isa => 'Str' );
+has 'de'        => ( is => 'rw', isa => 'Str' );
+has 'alternate' => ( is => 'rw', isa => 'Str' );
+
+foreach my $field ( qw/ en de alternate / )
+{
+   has $field . "_field" => (
+      is => 'rw',
+      lazy => 1,
+      builder => "_init_${field}_field",
+      init_arg => undef,
+   );
+}
+
+# Method:   _init_en_field {{{1
+# Purpose:  Builder for the en_field attribute
+sub _init_en_field
+{
+   my $self = shift;
+
+   my $entry = Gtk2::Entry->new();
+   return $entry;
+}
+
+# Method:   _init_de_field {{{1
+# Purpose:  Builder for the de_field attribute
+sub _init_de_field
+{
+   my $self = shift;
+
+   my $entry = Gtk2::Entry->new();
+   return $entry;
+}
+
+# Method:   _init_alternate_field {{{1
+# Purpose:  Builder for the alternate_field attribute
+sub _init_alternate_field
+{
+   my $self = shift;
+
+   my $entry = Gtk2::Entry->new();
+   $entry->set_tooltip_text(
+      "A regex matching all possible correct answers (optional)"
+   );
+   return $entry;
+}
 
 # Method:   display_all( box => $box ) {{{1
 # Purpose:  Display entry fields for everything the item needs
@@ -29,20 +72,50 @@ augment display_all => sub
       }
    );
 
+   # Get the three columns of the table
    my @item_rows = $args{box}->get_children();
    my @table = $item_rows[-1]->get_children();
 
    # Col: Labels
    $table[0]->add( Gtk2::Label->new( "English" ) );
    $table[0]->add( Gtk2::Label->new( "Deutsch" ) );
+   $table[0]->add( Gtk2::Label->new( "Alternate" ) );
 
    # Col: English & Deutsch entries
-   my $english_field = Gtk2::Entry->new();
-   $table[1]->add( $english_field );
-   my $deutsch_field = Gtk2::Entry->new();
-   $table[1]->add( $deutsch_field );
+   $table[1]->add( $self->get_en_field );
+   $table[1]->add( $self->get_de_field );
+   $table[1]->add( $self->get_alternate_field );
 
    inner();
+};
+
+# Method:   set_all() {{{1
+# Purpose:  Set attributes according to the values in entry fields
+augment set_all => sub
+{
+   my $self = shift;
+   $self->set_en( $self->get_en_field()->get_text() );
+   $self->set_de( $self->get_de_field()->get_text() );
+   $self->set_alternate( $self->get_alternate_field()->get_text() );
+
+   inner();
+};
+
+# Method:   dump() {{{1
+# Purpose:  Return a hash of the object's writable attributes
+augment dump => sub
+{
+   my $self = shift;
+
+   my %attrs;
+   $attrs{en} = $self->get_en if $self->get_en;
+   $attrs{de} = $self->get_de if $self->get_de;
+   $attrs{alternate} = $self->get_alternate if $self->get_alternate;
+
+   return (
+      %attrs,
+      inner()
+   );
 };
 
 # }}}1

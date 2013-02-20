@@ -30,6 +30,31 @@ sub handle_ui_exceptions
    $Log->alert( "Gtk threw an exception: $msg" );
 }
 
+# Function: new_window( title => $title ) {{{1
+# Purpose:  Create a window with menus and a VBox filling it
+# Input:    (string) Title
+# Return:   (Gtk2::Window) The window
+sub new_window
+{
+   my %args = Params::Validate::validate( @_, {
+         title => { type => Params::Validate::SCALAR }
+      } );
+   $Log->info( "Initializing an empty window" );
+
+   my $window = Gtk2::Window->new();
+   $window->signal_connect( destroy => \&destroy );
+   $window->set_title( "Vokab - " . $args{title} );
+   $window->set_border_width( 5 );
+
+   my $box = Gtk2::VBox->new();
+   $box->set_homogeneous( 0 );
+   $window->add( $box );
+
+   create_menus( $window );
+
+   return $window;
+}
+
 # Function: create_menus() {{{1
 # Purpose:  Create a menu and set some accelerators
 # Input:    (Gtk2::Window) window object

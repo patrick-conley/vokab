@@ -24,7 +24,7 @@ score = ( phat + z.^2./2./num ...
 
 % plot the graph
 make_plot
-contour( pos, neg, abs( score ), 0.1:0.1:0.9 )
+contour( pos, neg, abs( score ), 0.2:0.1:0.9 )
 
 xlim( [ 0 n_max ] )
 ylim( [ 0 n_max ] )

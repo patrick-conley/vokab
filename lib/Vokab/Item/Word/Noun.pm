@@ -13,8 +13,41 @@ use utf8;
 use Moose;
 extends 'Vokab::Item::Word';
 
-has 'gender' => ( is => 'rw' );
-has 'display_gender' => ( is => 'rw' );
+has 'gender'         => ( is => 'rw', isa => 'Str' );
+has 'display_gender' => ( is => 'rw', isa => 'Int' );
+
+foreach my $field ( qw/ gender display_gender / )
+{
+   has $field . "_field" => (
+      is => 'rw',
+      lazy => 1,
+      builder => "_init_${field}_field",
+      init_arg => undef,
+   );
+}
+
+# Method:   _init_gender_field {{{1
+# Purpose:  Builder for the gender_field attribute
+sub _init_gender_field
+{
+   my $self = shift;
+
+   my $entry = Gtk2::Entry->new_with_max_length(1);
+   $entry->set_width_chars( 2 ); # 'm' is too wide for 1
+   return $entry;
+}
+
+# Method:   _init_display_gender_field {{{1
+# Purpose:  Builder for the display_gender_field attribute
+sub _init_display_gender_field
+{
+   my $self = shift;
+
+   my $entry = Gtk2::CheckButton->new("Display gender?");
+   $entry->set_tooltip_text( "Set whether to display the item's gender in a "
+      . "quiz (appropriate for multi-gendered items, eg.  Freund/Freundin)" );
+   return $entry;
+}
 
 # Method:   display_all( box => $box ) {{{1
 # Purpose:  Display entry fields for everything the item needs
@@ -44,22 +77,43 @@ augment display_all => sub
    my $row = Gtk2::HBox->new();
    {
       $table[1]->add( $row );
-      my $gender_field = Gtk2::Entry->new_with_max_length(1);
-      $gender_field->set_width_chars( 2 ); # 'm' is too wide for 1
-      $row->pack_start( $gender_field, 0, 0, 0 ); # Don't expand
-
-      my $gender_shown_field = Gtk2::CheckButton->new("Display gender?");
-      $gender_shown_field->set_tooltip_text( "Set whether to display the item's gender in a quiz (appropriate for multi-gendered items, eg.  Freund/Freundin)" );
-      $row->add( $gender_shown_field );
+      $row->pack_start( $self->get_gender_field, 0, 0, 0 ); # Don't expand
+      $row->add( $self->get_display_gender_field );
    }
 
    # Col: Comment
-   $table[2]->add( Gtk2::Label->new( 
-         "Don't include any article\n('the', 'der', 'die', or 'das')" )
+   $table[2]->pack_start( Gtk2::Label->new( 
+         "Don't include any article\n('the', 'der', 'die', or 'das')" ),
+      0, 0, 0
    );
 
    inner();
 };
+
+# Method:   set_all() {{{1
+# Purpose:  Set attributes according to the values in entry fields
+augment set_all => sub
+{
+   my $self = shift;
+
+   $self->set_gender( $self->get_gender_field()->get_text() );
+   $self->set_display_gender(
+      $self->get_display_gender_field()->get_active() || 0
+   );
+};
+
+# Method:   dump() {{{1
+# Purpose:  Return a hash of the object's writable attributes
+augment dump => sub
+{
+   my $self = shift;
+
+   return (
+      gender => $self->get_gender,
+      display_gender => $self->get_display_gender
+   );
+};
+
 
 # }}}1
 

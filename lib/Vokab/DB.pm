@@ -10,7 +10,6 @@ use utf8;
 use DBI;
 use Log::Handler 'vokab';
 use Gtk2;
-use Data::Dumper;
 
 use Moose;
 use MooseX::FollowPBP;
