@@ -5,6 +5,8 @@ use warnings;
 use English;
 use utf8;
 
+use Vokab::Types qw/Text OptText/;
+
 # A Vokab::Item::Word is a testable object requiring a literal translation of
 # English to Deutsch (although in some cases, a regex may be used to identify
 # correct results if the word is ambiguous, eg. "welcome" to "Wilkommen" or
@@ -13,23 +15,23 @@ use utf8;
 use Moose;
 extends 'Vokab::Item';
 
-has 'en'        => ( is => 'rw', isa => 'Str' );
-has 'de'        => ( is => 'rw', isa => 'Str' );
-has 'alternate' => ( is => 'rw', isa => 'Str' );
+has 'en'        => ( is => 'rw', isa => Text, init_arg => undef );
+has 'de'        => ( is => 'rw', isa => Text, init_arg => undef );
+has 'alternate' => ( is => 'rw', isa => OptText, init_arg => undef );
 
 foreach my $field ( qw/ en de alternate / )
 {
    has $field . "_field" => (
       is => 'rw',
       lazy => 1,
-      builder => "_init_${field}_field",
+      builder => "_build_${field}_field",
       init_arg => undef,
    );
 }
 
-# Method:   _init_en_field {{{1
+# Method:   _build_en_field {{{1
 # Purpose:  Builder for the en_field attribute
-sub _init_en_field
+sub _build_en_field
 {
    my $self = shift;
 
@@ -37,9 +39,9 @@ sub _init_en_field
    return $entry;
 }
 
-# Method:   _init_de_field {{{1
+# Method:   _build_de_field {{{1
 # Purpose:  Builder for the de_field attribute
-sub _init_de_field
+sub _build_de_field
 {
    my $self = shift;
 
@@ -47,9 +49,9 @@ sub _init_de_field
    return $entry;
 }
 
-# Method:   _init_alternate_field {{{1
+# Method:   _build_alternate_field {{{1
 # Purpose:  Builder for the alternate_field attribute
-sub _init_alternate_field
+sub _build_alternate_field
 {
    my $self = shift;
 

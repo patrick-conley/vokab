@@ -5,12 +5,15 @@ use warnings;
 use English qw/ -no-match-vars/;
 use utf8;
 
+use Vokab::Types qw/Natural OptText Real/;
+
 # A Vokab::Item is meant to be used for any testable object.
 
 use Gtk2;
 use Params::Validate;
 
 use Moose;
+use Moose::Util::TypeConstraints;
 use MooseX::FollowPBP; # use get_, set_ accessors
 use namespace::autoclean; # clean up Moose droppings
 
@@ -26,32 +29,31 @@ has 'log' => (
 has 'dbh' => (
    is => 'ro', # Database handler
    reader => 'dbh',
-   required => 1,
    isa => 'Vokab::DB'
 );
 
-has 'id' => ( is => 'rw', isa => 'Int' );
-has 'class' => ( is => 'rw', isa => 'ClassName' );
-has 'tests' => ( is => 'rw', isa => 'Int' );
-has 'success' => ( is => 'rw', isa => 'Int' );
-has 'score' => ( is => 'rw', isa => 'Num' );
+has 'id' => ( is => 'rw', isa => Natural, init_arg => undef );
+has 'class' => ( is => 'rw', isa => 'ClassName', init_arg => undef );
+has 'tests' => ( is => 'rw', isa => Natural, init_arg => undef );
+has 'success' => ( is => 'rw', isa => Natural, init_arg => undef );
+has 'score' => ( is => 'rw', isa => Real, init_arg => undef );
 
-has 'chapter' => ( is => 'rw', isa => 'Int' );
-has 'section' => ( is => 'rw', isa => 'Str' );
+has 'chapter' => ( is => 'rw', isa => Natural );
+has 'section' => ( is => 'rw', isa => OptText );
 
 foreach my $field ( qw/ chapter section / )
 {
    has $field . "_field" => (
       is => 'rw',
       lazy => 1,
-      builder => "_init_${field}_field",
+      builder => "_build_${field}_field",
       init_arg => undef,
    );
 }
 
-# Method:   _init_chapter_field {{{1
+# Method:   _build_chapter_field {{{1
 # Purpose:  Builder for the chapter_field attribute
-sub _init_chapter_field
+sub _build_chapter_field
 {
    my $self = shift;
 
@@ -60,9 +62,9 @@ sub _init_chapter_field
    return $entry;
 }
 
-# Method:   _init_section_field {{{1
+# Method:   _build_section_field {{{1
 # Purpose:  Builder for the section_field attribute
-sub _init_section_field
+sub _build_section_field
 {
    my $self = shift;
 

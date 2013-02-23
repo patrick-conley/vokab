@@ -1,20 +1,16 @@
 use strict;
 use warnings;
-use English;
+use English qw/ -no-match-vars/;
 use utf8;
 
-use Test::More tests => 6;
-use Test::Exception;
-use Test::Deep;
-
+use Test::Most tests => 7;
 use File::Temp;
-use DBI;
 
-my $Source_Path;
-BEGIN { $Source_Path = Cwd::abs_path(__FILE__) =~ s!/[^/]*/[^/]*$!!r; }
-use lib "$Source_Path/lib";
-
-BEGIN { use_ok( "Vokab::DB" ); }
+BEGIN {
+   bail_on_fail();
+   use_ok( "Vokab::DB" );
+   restore_fail();
+}
 
 my $db;
 my $dbname = File::Temp::tempdir() . "/vokab.db";
@@ -36,9 +32,16 @@ $db = Vokab::DB->new( dbname => '/no/such/path', error_handler =>
 throws_ok { $db->create_db } qr/unable to open database file/,
    "Fails on inaccessible database";
 
-isa_ok(
+bail_on_fail();
+ok( 
    $db = Vokab::DB->new( dbname => $dbname, error_handler => \&handle_exceptions_fallback ),
-   "Vokab::DB" );
+   "Vokab::DB->new()"
+);
+restore_fail();
+
+die_on_fail();
+isa_ok( $db, "Vokab::DB", "Vokab::DB->new returns a Vokab::DB" );
+restore_fail();
 
 ok( $db->create_db, "Create a DB" );
 throws_ok { $db->create_db } qr/table \w* already exists/,

@@ -5,6 +5,8 @@ use warnings;
 use English qw/ -no-match-vars/;
 use utf8;
 
+use Vokab::Types qw/ Gender IntBool Noun /;
+
 # A Vokab::Item::Word::Noun is a noun. It will ordinarilly have a specified
 # gender, and the translation must include the correct pronoun. The plural
 # form must also be entered. Certain words (eg., "friend") may allow both the
@@ -13,22 +15,24 @@ use utf8;
 use Moose;
 extends 'Vokab::Item::Word';
 
-has 'gender'         => ( is => 'rw', isa => 'Str' );
-has 'display_gender' => ( is => 'rw', isa => 'Int' );
+has 'gender'         => ( is => 'rw', isa => Gender, init_arg => undef );
+has 'display_gender' => ( is => 'rw', isa => IntBool, init_arg => undef );
+has '+en'             => ( isa => Noun );
+has '+de'             => ( isa => Noun );
 
 foreach my $field ( qw/ gender display_gender / )
 {
    has $field . "_field" => (
       is => 'rw',
       lazy => 1,
-      builder => "_init_${field}_field",
+      builder => "_build_${field}_field",
       init_arg => undef,
    );
 }
 
-# Method:   _init_gender_field {{{1
+# Method:   _build_gender_field {{{1
 # Purpose:  Builder for the gender_field attribute
-sub _init_gender_field
+sub _build_gender_field
 {
    my $self = shift;
 
@@ -37,9 +41,9 @@ sub _init_gender_field
    return $entry;
 }
 
-# Method:   _init_display_gender_field {{{1
+# Method:   _build_display_gender_field {{{1
 # Purpose:  Builder for the display_gender_field attribute
-sub _init_display_gender_field
+sub _build_display_gender_field
 {
    my $self = shift;
 

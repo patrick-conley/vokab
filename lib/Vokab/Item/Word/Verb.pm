@@ -2,19 +2,22 @@ package Vokab::Item::Word::Verb;
 
 use strict;
 use warnings;
+use English qw/ -no-match-vars/;
 use utf8;
+
+use Vokab::Types qw/Text/;
 
 use Moose;
 extends 'Vokab::Item::Word';
 
-has 'conjugation' => ( is => 'rw', isa => 'HashRef' );
+has 'conjugation' => ( is => 'rw', isa => 'HashRef[Text]', init_arg => undef );
 
 foreach my $field ( qw/ conjugation / )
 {
    has $field . "_field" => (
       is => 'rw',
       lazy => 1,
-      builder => "_init_${field}_field",
+      builder => "_build_${field}_field",
       init_arg => undef,
    );
 }
@@ -23,9 +26,9 @@ foreach my $field ( qw/ conjugation / )
 # each person must be entered, but in selecting a verb only one person is
 # given.
 
-# Method:   _init_conjugation_field {{{1
+# Method:   _build_conjugation_field {{{1
 # Purpose:  Builder for the conjugation_field attribute
-sub _init_conjugation_field
+sub _build_conjugation_field
 {
    my $self = shift;
 

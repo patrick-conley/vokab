@@ -218,10 +218,9 @@ sub submit_item
    # work out how to get the TreeIter corresponding to the item
    #
    # TODO ALSO:
-   # I don't want to test all the verb conjugations. Just ask for the
-   # infinitive, and display the conjugations with the success message after
-   # testing
-   #
+   # Verbs store each person. When testing, select one at random. Don't
+   # store individual results. Display all people with the success message
+   # after testing.
    on_set_item_class();
 }
 
