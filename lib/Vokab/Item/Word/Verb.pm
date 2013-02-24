@@ -5,12 +5,17 @@ use warnings;
 use English qw/ -no-match-vars/;
 use utf8;
 
-use Vokab::Types qw/Text/;
+use Vokab::Types qw/Verb/;
 
 use Moose;
 extends 'Vokab::Item::Word';
 
-has 'conjugation' => ( is => 'rw', isa => 'HashRef[Text]', init_arg => undef );
+# Conjugation:
+# A hashref with keys qw/ ich du er Sie wir ihr sie /
+# Some keys can be autodefined:
+# wir,sie,Sie == undef <= infinitive
+# ihr,er == undef <= er,ihr (at least one must be defined)
+has( 'conjugation' => ( is => 'rw', isa => Verb, init_arg => undef ) );
 
 foreach my $field ( qw/ conjugation / )
 {

@@ -17,29 +17,31 @@ use Moose::Util::TypeConstraints;
 use MooseX::FollowPBP; # use get_, set_ accessors
 use namespace::autoclean; # clean up Moose droppings
 
-has 'log' => (
-   is => 'ro', # Log::Handler object for debugging output
-   default => sub { return Log::Handler->get_logger("vokab"); },
-   reader => 'log',   # override Moose::FollowPBP
-   lazy => 1,         # don't set it until used
-   init_arg => undef, # don't allow this to be set with new()
-   isa => 'Log::Handler'
+has( 'log' => (
+      is => 'ro', # Log::Handler object for debugging output
+      default => sub { return Log::Handler->get_logger("vokab"); },
+      reader => 'log',   # override Moose::FollowPBP
+      lazy => 1,         # don't set it until used
+      init_arg => undef, # don't allow this to be set with new()
+      isa => 'Log::Handler'
+   )
 );
 
-has 'dbh' => (
-   is => 'ro', # Database handler
-   reader => 'dbh',
-   isa => 'Vokab::DB'
+has( 'dbh' => (
+      is => 'ro', # Database handler
+      reader => 'dbh',
+      isa => 'Vokab::DB'
+   )
 );
 
-has 'id' => ( is => 'rw', isa => Natural, init_arg => undef );
-has 'class' => ( is => 'rw', isa => 'ClassName', init_arg => undef );
-has 'tests' => ( is => 'rw', isa => Natural, init_arg => undef );
-has 'success' => ( is => 'rw', isa => Natural, init_arg => undef );
-has 'score' => ( is => 'rw', isa => Real, init_arg => undef );
+has( 'id' => ( is => 'rw', isa => Natural, init_arg => undef ) );
+has( 'class' => ( is => 'rw', isa => 'ClassName', init_arg => undef ) );
+has( 'tests' => ( is => 'rw', isa => Natural, init_arg => undef ) );
+has( 'success' => ( is => 'rw', isa => Natural, init_arg => undef ) );
+has( 'score' => ( is => 'rw', isa => Real, init_arg => undef ) );
 
-has 'chapter' => ( is => 'rw', isa => Natural );
-has 'section' => ( is => 'rw', isa => OptText );
+has( 'chapter' => ( is => 'rw', isa => Natural ) );
+has( 'section' => ( is => 'rw', isa => OptText ) );
 
 foreach my $field ( qw/ chapter section / )
 {

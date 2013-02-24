@@ -15,9 +15,9 @@ use Vokab::Types qw/Text OptText/;
 use Moose;
 extends 'Vokab::Item';
 
-has 'en'        => ( is => 'rw', isa => Text, init_arg => undef );
-has 'de'        => ( is => 'rw', isa => Text, init_arg => undef );
-has 'alternate' => ( is => 'rw', isa => OptText, init_arg => undef );
+has( 'en'        => ( is => 'rw', isa => Text, init_arg => undef ) );
+has( 'de'        => ( is => 'rw', isa => Text, init_arg => undef ) );
+has( 'alternate' => ( is => 'rw', isa => OptText, init_arg => undef ) );
 
 foreach my $field ( qw/ en de alternate / )
 {

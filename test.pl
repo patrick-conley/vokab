@@ -8,8 +8,8 @@ use utf8;
 use TAP::Harness;
 
 my @tests = (
-   'db',
    'vokab-types',
+   'db',
    'vokab-items',
 );
 
