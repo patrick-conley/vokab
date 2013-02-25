@@ -10,7 +10,7 @@ use TAP::Harness;
 
 my @tests = (
    'vokab-types',
-   'db',
+   'vokab-db',
    'vokab-items',
 );
 
