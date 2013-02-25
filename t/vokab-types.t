@@ -2,6 +2,7 @@ use strict;
 use warnings;
 use English qw/ -no-match-vars/;
 use utf8;
+use 5.012;
 
 use Data::Dumper;
 local $Data::Dumper::Indent = 0;
@@ -9,7 +10,7 @@ local $Data::Dumper::Varname = '';
 local $Data::Dumper::Terse = 1;
 local $Data::Dumper::Pad = " ";
 
-use Test::Most tests => 223;
+use Test::Most tests => 235;
 
 # Note: this test script relies on the Moose class Vokab::Types::Test, not
 # Vokab::Types (which is what's actually being tested). This is so I have a
@@ -39,14 +40,14 @@ my @type_tests = (
       [ 0, 1, 0.001, 0.58 ], # [4]
       [ -0.01, 1.01, 55, undef, 'a', 'The word' ] ], # [6]
    [ 'Text',
-      [ 'a', 'The word', 'word 1', '& things' ], # [4]
-      [ undef, '1', '-', "" ] ], # [4]
+      [ 'a', 'The word', "it's", 'foo-bar' ], # [4]
+      [ undef, '1', 'word 1', '& things', '-', "" ] ], # [6]
    [ 'OptText',
-      [ 'a', 'The word', 'word 1', '& things', undef, "" ], # [6]
-      [ '1', '-' ] ], # [2]
+      [ 'a', 'The word', undef, "", "it's", 'foo-bar' ], # [6]
+      [ '1', 'word 1', '& things', '-' ] ], # [4]
    [ 'Gender',
-      [ 'm', 'n', 'f', 'masculine' ], # [4]
-      [ 'a', 'The word', undef, 2, "" ] ], # [5]
+      [ 'm', 'n', 'f' ], # [4]
+      [ 'a', 'The word', undef, 2, "", 'masculine' ] ], # [5]
    [ 'Noun',
       [ 'a', 'word', 'Übersetzungen' ], # [3]
       [ 'the word', 'das Wort', 'die Wörter', '1', 'Word 1', undef, "" ] ], # [7]

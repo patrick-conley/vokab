@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use English qw/ -no-match-vars /;
 use utf8;
-use feature 'state';
+use 5.012;
 
 # A package with functions to add new items to the DB. It is not a class; it
 # merely provides some encapsulation of the script's functionality.

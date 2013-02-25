@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use English;
 use utf8;
+use 5.012;
 
 use Vokab::Types qw/Text OptText/;
 

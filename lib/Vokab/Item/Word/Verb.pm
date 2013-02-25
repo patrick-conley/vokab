@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use English qw/ -no-match-vars/;
 use utf8;
+use 5.012;
 
 use Vokab::Types qw/Verb/;
 

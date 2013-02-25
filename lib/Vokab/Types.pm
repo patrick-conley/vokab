@@ -4,12 +4,13 @@ use strict;
 use warnings;
 use English qw/ -no-match-vars/;
 use utf8;
+use 5.012;
 
 use MooseX::Types -declare => [
-   qw/ Natural IntBool Real Text OptText Gender Noun Verb/
+   qw/ Natural IntBool Real Text OptText Gender Noun Verb EmptyStr/
 ];
 
-use MooseX::Types::Moose qw/ Bool Int Num Str Any HashRef/;
+use MooseX::Types::Moose qw/ Bool Int Num Str HashRef Undef/;
 
 subtype( Natural, {
       as => Int,
@@ -31,31 +32,34 @@ subtype( Real, {
 
 subtype( Text, {
       as => Str,
-      where => sub { $ARG =~ /[a-zA-Z]/ }
+      where => sub { $ARG =~ /^\w([-\w ']*[\w'])?$/u && $ARG !~ /[0-9]/ }
+   }
+);
+
+subtype( EmptyStr, {
+      as => Str,
+      where => sub { $ARG eq "" }
    }
 );
 
 subtype( OptText, {
-      as => Any,
-      where => sub { (! defined $ARG) || $ARG =~ /[a-zA-Z]/ || $ARG =~ /^$/ }
+      as => Text | Undef | EmptyStr,
    }
 );
 
 subtype( Gender, {
       as => Str,
-      where => sub { $ARG =~ /^[fmn]/ }
+      where => sub { $ARG =~ /^[fmn]$/ }
    }
 );
 
 subtype( Noun, {
       as => Text,
-      where => sub { $ARG !~ /^\s*(the|der|die|das)\s/ && $ARG !~ /[0-9]/ }
+      where => sub { $ARG !~ /^(the|der|die|das)\s/ }
    }
 );
 
 subtype( Verb, {
-      # FIXME: should use a specific 'Word' type, allowing alpha characters
-      # and things like apostrophes or hyphens, but not numbers
       as => HashRef[Noun],
       where => sub { 
          defined $ARG->{ich} && defined $ARG->{du}

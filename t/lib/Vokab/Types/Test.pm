@@ -8,7 +8,6 @@ use utf8;
 use Vokab::Types qw/ Natural IntBool Real Text OptText Gender Noun Verb/;
 
 use Moose;
-use Moose::Util::TypeConstraints;
 use MooseX::FollowPBP;
 use namespace::autoclean;
 

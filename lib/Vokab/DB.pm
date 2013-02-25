@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use English qw/ -no-match-vars /;
 use utf8;
+use 5.012;
 
 # A class for DB access
 
@@ -48,12 +49,16 @@ sub _init_dbh
 {
    my $self = shift;
    
-   return DBI->connect( "dbi:SQLite:dbname=" . $self->get_dbname(),
+   my $dbh = DBI->connect( "dbi:SQLite:dbname=" . $self->get_dbname() . ":sqlite_unicode=1",
       "", "", {
  #          RaiseError => 1,
          HandleError => $self->get_error_handler,
          AutoCommit => 1,
       } ) or $self->log->alert( $DBI::errstr );
+
+	$dbh->do( "PRAGMA foreign_keys = ON" );
+
+	return $dbh;
 }
 
 # Method:   destructor {{{1
