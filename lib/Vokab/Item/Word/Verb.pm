@@ -39,13 +39,13 @@ sub _build_conjugation_field
    my $self = shift;
 
    my $conj = {
-      s1 => Gtk2::Entry->new(),
-      s2 => Gtk2::Entry->new(),
-      f2 => Gtk2::Entry->new(),
-      s3 => Gtk2::Entry->new(),
-      p1 => Gtk2::Entry->new(),
-      p2 => Gtk2::Entry->new(),
-      p3 => Gtk2::Entry->new(),
+      ich => Gtk2::Entry->new(),
+      du => Gtk2::Entry->new(),
+      Sie => Gtk2::Entry->new(),
+      er => Gtk2::Entry->new(),
+      wir => Gtk2::Entry->new(),
+      ihr => Gtk2::Entry->new(),
+      sie => Gtk2::Entry->new(),
    };
    return $conj;
 }
@@ -87,19 +87,19 @@ augment display_all => sub
       {
          $conj_row->add( $col );
 
-         $col->pack_start( $self->get_conjugation_field->{s1}, 0, 0, 0 );
-         $col->pack_start( $self->get_conjugation_field->{s2}, 0, 0, 0 );
-         $col->pack_start( $self->get_conjugation_field->{f2}, 0, 0, 0 );
-         $col->pack_start( $self->get_conjugation_field->{s3}, 0, 0, 0 );
+         $col->pack_start( $self->get_conjugation_field->{ich}, 0, 0, 0 );
+         $col->pack_start( $self->get_conjugation_field->{du}, 0, 0, 0 );
+         $col->pack_start( $self->get_conjugation_field->{Sie}, 0, 0, 0 );
+         $col->pack_start( $self->get_conjugation_field->{er}, 0, 0, 0 );
       }
 
       $col = Gtk2::VBox->new();
       {
          $conj_row->add( $col );
 
-         $col->pack_start( $self->get_conjugation_field->{p1}, 0, 0, 0 );
-         $col->pack_start( $self->get_conjugation_field->{p2}, 0, 0, 0 );
-         $col->pack_start( $self->get_conjugation_field->{p3}, 0, 0, 0 );
+         $col->pack_start( $self->get_conjugation_field->{wir}, 0, 0, 0 );
+         $col->pack_start( $self->get_conjugation_field->{ihr}, 0, 0, 0 );
+         $col->pack_start( $self->get_conjugation_field->{sie}, 0, 0, 0 );
       }
 
       $col = Gtk2::VBox->new();

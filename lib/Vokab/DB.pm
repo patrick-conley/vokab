@@ -49,7 +49,8 @@ sub _init_dbh
 {
    my $self = shift;
    
-   my $dbh = DBI->connect( "dbi:SQLite:dbname=" . $self->get_dbname() . ":sqlite_unicode=1",
+   my $dbh = DBI->connect( "dbi:SQLite:dbname=" . $self->get_dbname()
+		. ":sqlite_unicode=1",
       "", "", {
  #          RaiseError => 1,
          HandleError => $self->get_error_handler,

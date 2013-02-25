@@ -2,6 +2,7 @@ use strict;
 use warnings;
 use English qw/ -no-match-vars/;
 use utf8;
+use 5.012;
 
 use Test::Most tests => 7;
 use File::Temp;
@@ -47,7 +48,7 @@ ok( $db->create_db, "Create a DB" );
 throws_ok { $db->create_db } qr/table \w* already exists/,
    "Don't clobber the DB";
    
-# Test prepared statements {{{1
+# Test prepared functions {{{1
 cmp_deeply( $db->readall_item_types(), [
       [ 'Noun', 'Vokab::Item::Word::Noun' ],
       [ 'Verb', 'Vokab::Item::Word::Verb' ],

@@ -3,7 +3,7 @@ use warnings;
 use English qw/ -no-match-vars/;
 use utf8;
 
-use Test::Most tests => 202;
+use Test::Most tests => 216;
 use File::Temp;
 
 BEGIN # [5]
@@ -42,52 +42,52 @@ sub run_tests
    # [init*(4*good+3*bad)+noinit*(6+2*good+2*bad)]
    foreach my $attr ( @attrs )
    {
-      $get = "get_" . $attr->[0];
-      $set = "set_" . $attr->[0];
+      $get = "get_" . $attr->{attr};
+      $set = "set_" . $attr->{attr};
 
-      # Test accessors
+      # Test accessors {{{2
 
       # Test valid values [2*good]
-      foreach my $good_val ( @{$attr->[3]} )
+      foreach my $good_val ( @{$attr->{good}} )
       {
          $printable = defined $good_val ? $good_val : "undef";
          $item = $class->new();
          lives_ok { $item->$set( $good_val ) }
-            "set_$attr->[0]( $printable ) succeeds";
-         is( $item->$get, $good_val, "get_$attr->[0] returns $printable" );
+            "set_$attr->{attr}( $printable ) succeeds";
+         is( $item->$get, $good_val, "get_$attr->{attr} returns $printable" );
       }
 
       # Test invalid values [2*bad]
-      foreach my $bad_val ( @{$attr->[4]} )
+      foreach my $bad_val ( @{$attr->{bad}} )
       {
          $printable = defined $bad_val ? $bad_val : "undef";
          $item = $class->new();
          throws_ok { $item->$set( $bad_val ) }
-            qr/\($attr->[0]\) does not pass the type constraint/,
-            "$class->set_$attr->[0]( $printable ) dies";
-         is( $item->$get, undef, "$class->get_$attr->[0] fails to undef" );
+            qr/\($attr->{attr}\) does not pass the type constraint/,
+            "$class->set_$attr->{attr}( $printable ) dies";
+         is( $item->$get, undef, "$class->get_$attr->{attr} fails to undef" );
       }
 
-      # Test initializers
+      # Test initializers {{{2
 
-      if ( $attr->[2] )
+      if ( $attr->{init} )
       {
          # Test valid values [2*good]
-         foreach my $good_val ( @{$attr->[3]} )
+         foreach my $good_val ( @{$attr->{good}} )
          {
             $printable = defined $good_val ? $good_val : "undef";
-            lives_ok { $item = $class->new( $attr->[0] => $good_val ) }
-               "$class->new( $attr->[0] => $printable )  ($attr->[1]) succeeds";
-            is( $item->$get, $good_val, "new( $attr->[0] => $printable ) works" );
+            lives_ok { $item = $class->new( $attr->{attr} => $good_val ) }
+               "$class->new( $attr->{attr} => $printable )  ($attr->{type}) succeeds";
+            is( $item->$get, $good_val, "new( $attr->{attr} => $printable ) works" );
          }
 
          # Test invalid values [bad]
-         foreach my $bad_val ( @{$attr->[4]} )
+         foreach my $bad_val ( @{$attr->{bad}} )
          {
             $printable = defined $bad_val ? $bad_val : "undef";
-            throws_ok { $class->new( $attr->[0] => $bad_val ) }
-               qr/\($attr->[0]\) does not pass the type constraint/,
-               "$class->new( $attr->[0] => $printable ) ($attr->[1]) dies";
+            throws_ok { $class->new( $attr->{attr} => $bad_val ) }
+               qr/\($attr->{attr}\) does not pass the type constraint/,
+               "$class->new( $attr->{attr} => $printable ) ($attr->{type}) dies";
          }
       }
       else
@@ -96,9 +96,9 @@ sub run_tests
          foreach my $val ( qw/ 1 foo /, undef )
          {
             $printable = defined $val ? $val : "undef";
-            lives_ok { $item = $class->new( $attr->[0] => $val ) }
-               "$class->new( $attr->[0] => $printable ) ($attr->[1]) succeeds";
-            is( $item->$get, undef, "get_$attr->[0] returns undef" );
+            lives_ok { $item = $class->new( $attr->{attr} => $val ) }
+               "$class->new( $attr->{attr} => $printable ) ($attr->{type}) succeeds";
+            is( $item->$get, undef, "get_$attr->{attr} returns undef" );
          }
       }
    }
@@ -107,35 +107,135 @@ sub run_tests
 # }}}1
 
 # tests = init*(4*good+3*bad)+noinit*(6+2*good+2*bad)
-
-# Vokab::Item [21+30+42=93]
+# Vokab::Item [21+30+42=93] {{{1
 my @item_attrs = (
    # attr         type        init  good              bad...
-   [ 'id',        'NotNegative',         0, [ 1, 35 ],        [ -1, 'foo' ] ],
-   [ 'class',     'ClassName',   0, [ 'Vokab::Item::Word::Noun' ], [ 'foo', 'Vokab::Item::Foo' ] ],
-   [ 'tests',     'NotNegative', 0, [ 0, 1 ],         [ -1, 'foo' ] ],
-   [ 'success',   'NotNegative', 0, [ 0, 1 ],         [ -1, 'foo' ] ],
-   [ 'score',     'Real',        0, [ 0, 1, 0.8 ],    [ -0.1, 1.1, 'foo' ] ],
-   [ 'chapter',   'NotNegative', 1, [ 1 ],            [ -1, 'foo' ] ],
-   [ 'section',   'OptText',        1, [ 'foo', undef ], [ 1 ]   ],
+   {
+      attr => 'id',
+      type => 'Natural',
+      init => 0,
+      good => [ 1, 35 ],
+      bad => [ -1, 'foo' ]
+   }, 
+   {
+      attr => 'class',
+      type => 'ClassName',
+      init => 0,
+      good => [ 'Vokab::Item::Word::Noun' ],
+      bad => [ 'foo', 'Vokab::Item::Foo' ]
+   }, 
+   {
+      attr => 'tests',
+      type => 'Natural',
+      init => 0,
+      good => [ 0, 1 ],
+      bad => [ -1, 'foo' ]
+   }, 
+   {
+      attr => 'success',
+      type => 'Natural',
+      init => 0,
+      good => [ 0, 1 ],
+      bad => [ -1, 'foo' ]
+   }, 
+   {
+      attr => 'score',
+      type => 'Real',
+      init => 0,
+      good => [ 0, 1, 0.8 ],
+      bad => [ -0.1, 1.1, 'foo' ]
+   }, 
+   {
+      attr => 'chapter',
+      type => 'Natural',
+      init => 1,
+      good => [ 1 ],
+      bad => [ -1, 'foo' ]
+   }, 
+   {
+      attr => 'section',
+      type => 'OptText',
+      init => 1,
+      good => [ 'foo', undef ],
+      bad => [ 1 ]
+   }, 
 );
 
-# Vokab::Item::Word [18+18=40]
+# Vokab::Item::Word [18+18=40] {{{1
 my @word_attrs = (
-   [ 'en',        'Text', 0, [ 'foo', 'the foo' ], [ 1, undef ] ],
-   [ 'de',        'Text', 0, [ 'bar', 'der bar' ], [ 1, undef ] ],
-   [ 'alternate', 'OptText', 0, [ undef ], [] ],
+   {
+      attr => 'en',
+      type => 'Text',
+      init => 0,
+      good => [ 'foo', 'the foo' ],
+      bad => [ 1, undef ]
+   }, 
+   {
+      attr => 'de',
+      type => 'Text',
+      init => 0,
+      good => [ 'bar', 'der bar' ],
+      bad => [ 1, undef ]
+   }, 
+   {
+      attr => 'alternate',
+      type => 'OptText',
+      init => 0,
+      good => [ undef ],
+      bad => []
+   }, 
 );
 
-# Vokab::Item::Word::Noun [24+44=36]
+# Vokab::Item::Word::Noun [24+44=36] {{{1
 my @noun_attrs = (
-   [ 'gender',          'Str', 0, [ 'm', 'f', 'n' ],  [ undef, 1, 'a', 'e' ] ],
-   [ 'display_gender',  'Int', 0, [ 0, 1 ],           [ 'foo', -1, undef ] ],
-   [ 'en',              'Str', 0, [ 'foo' ],          [ 1, 'the foo', undef ] ],
-   [ 'de',              'Str', 0, [ 'bar' ],          [ 1, 'der bar', 'die bar', 'das bar', undef ] ],
+   {
+      attr => 'gender',
+      type => 'Gender',
+      init => 0,
+      good => [ 'm', 'f', 'n' ],
+      bad => [ undef, 1, 'a', 'e' ]
+   }, 
+   {
+      attr => 'display_gender',
+      type => 'IntBool',
+      init => 0,
+      good => [ 0, 1 ],
+      bad => [ 'foo', -1, undef ]
+   }, 
+   {
+      attr => 'en',
+      type => 'Noun',
+      init => 0,
+      good => [ 'foo' ],
+      bad => [ 1, 'the foo', undef ]
+   }, 
+   {
+      attr => 'de',
+      type => 'Noun',
+      init => 0,
+      good => [ 'bar' ],
+      bad => [ 1, 'der bar', 'die bar', 'das bar', undef ]
+   }, 
 );
+
+# Vokab::Item::Word::Verb [6+8=14] {{{1
+my @verb_attrs = (
+   {
+      attr => 'conjugation',
+      type => 'Verb',
+      init => 0,
+      good => [
+         { ich => 'foo', du => 'foo', er => 'foo', Sie => 'foo',
+            wir => 'foo', ihr => 'foo', sie => 'foo' }
+      ],
+      bad => [ { wir => 'foo' }, undef, "" ],
+   }, 
+);
+
+# }}}1
 
 run_tests( 'Vokab::Item', @item_attrs );
 run_tests( 'Vokab::Item::Word', @word_attrs );
 run_tests( 'Vokab::Item::Word::Noun', @noun_attrs );
+run_tests( 'Vokab::Item::Word::Verb', @verb_attrs );
 
