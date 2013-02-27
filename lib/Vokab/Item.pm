@@ -47,9 +47,10 @@ has( 'section' => ( is => 'rw', isa => OptText ) );
 foreach my $field ( qw/ chapter section / )
 {
    has $field . "_field" => (
-      is => 'rw',
+      is => 'ro',
       lazy => 1,
       builder => "_build_${field}_field",
+      isa => "Gtk2::Widget",
       init_arg => undef,
    );
 }

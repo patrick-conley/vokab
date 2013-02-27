@@ -21,9 +21,10 @@ has( 'conjugation' => ( is => 'rw', isa => Verb, init_arg => undef ) );
 foreach my $field ( qw/ conjugation / )
 {
    has $field . "_field" => (
-      is => 'rw',
+      is => 'ro',
       lazy => 1,
       builder => "_build_${field}_field",
+      isa => "HashRef[Gtk2::Widget]",
       init_arg => undef,
    );
 }
