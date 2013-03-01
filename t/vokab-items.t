@@ -3,7 +3,8 @@ use warnings;
 use English qw/ -no-match-vars/;
 use utf8;
 
-use Test::Most tests => 295;
+use Test::Most tests => 332;
+use Data::Dumper;
 use Gtk2 '-init';
 
 BEGIN # [5]
@@ -173,57 +174,100 @@ sub test_entry_field_attributes
          "$attr->{name} is read-only";
 
       # Test the attribute has been built to the correct type {{{2
-      if ( ref $attr->{value} eq "HASH" )
-      {
-         my $is_right_type = 1;
-         foreach my $key ( keys %{$attr->{value}} )
-         {
-            $is_right_type *=
-               ref $obj->$getter->{$key} eq "Gtk2::$attr->{type}";
-         }
-
-         ok( $is_right_type,
-            "$attr->{name}'s hash elements are all Gtk2::$attr->{type}" );
-      }
-      else
-      {
-         isa_ok( $obj->$getter, "Gtk2::$attr->{type}", 
-            "$attr->{name} is a Gtk2::$attr->{type}" );
-      }
+      isa_ok( $obj->$getter, "Gtk2::$attr->{type}", 
+         "$attr->{name} is a Gtk2::$attr->{type}" );
 
       # Test accessors {{{2
-      if ( ref $attr->{value} eq "HASH" )
-      {
-         foreach my $key ( keys %{$attr->{value}} )
-         {
-            my $entry = $obj->$getter->{$key};
-            my $entry_set = $Gtk_types->{$attr->{type}}->{setter};
-            my $entry_get = $Gtk_types->{$attr->{type}}->{getter};
+      my $entry = $obj->$getter;
+      my $entry_set = $Gtk_types->{$attr->{type}}->{setter};
+      my $entry_get = $Gtk_types->{$attr->{type}}->{getter};
 
-            lives_ok { $entry->$entry_set( $attr->{value}->{$key} ) }
-               "$attr->{name} ($key) setter runs";
-            lives_ok { $entry->$entry_get }
-               "$attr->{name} ($key) getter runs";
-            is( $entry->$entry_get, $attr->{value}->{$key},
-               "$attr->{name} ($key) accessors work" );
-         }
-      }
-      else
-      {
-         my $entry = $obj->$getter;
-         my $entry_set = $Gtk_types->{$attr->{type}}->{setter};
-         my $entry_get = $Gtk_types->{$attr->{type}}->{getter};
-
-         lives_ok { $entry->$entry_set( $attr->{value} ) }
-            "$attr->{name} setter runs";
-         lives_ok { $entry->$entry_get }
-            "$attr->{name} getter runs";
-         is( $entry->$entry_get, $attr->{value},
-            "$attr->{name} accessors work" );
-      }
-
+      lives_ok { $entry->$entry_set( $attr->{value} ) }
+         "$attr->{name} setter runs";
+      lives_ok { $entry->$entry_get }
+         "$attr->{name} getter runs";
+      is( $entry->$entry_get, $attr->{value},
+         "$attr->{name} accessors work" );
       # }}}2
    }
+}
+
+# Function: test_display_all {{{1
+# Purpose:  Test the method display_all
+# Tests:    ??
+# Input:    (string) The class name
+#           (hashref) datatype of each attribute
+#           (hashref) some information about each datatype
+sub test_display_all
+{
+   my $class = shift;
+
+   my $obj = $class->{class}->new();
+   my $main_box = Gtk2::VBox->new();
+
+   # display_all makes $box the root of an arbitrarily large tree
+   lives_ok { $obj->display_all( box => $main_box ) }
+      "$class->{class}->new runs";
+
+   my @boxes_to_test = $main_box;
+   my %found_fields; # Hash of Gtk types containing lists of matched fields
+
+   # Iteratively search the children of every box in the tree for entries {{{2
+   foreach my $box ( @boxes_to_test )
+   {
+      foreach my $child ( $box->get_children() )
+      {
+         if ( $child->isa( "Gtk2::Box" ) )
+         {
+            # Further boxes should be added to the main list to be tested
+            # later
+
+            push @boxes_to_test, $child;
+         }
+         else
+         {
+            my ( $type ) = grep { $child->isa( "Gtk2::$ARG" ) } keys %$Gtk_types;
+            if ( defined $type )
+            {
+               push @{$found_fields{$type}}, $child;
+            }
+         }
+      }
+   }
+
+   # Find the entry field corresponding to each entry attribute {{{2
+
+   ATTR: foreach my $attr ( @{$class->{attrs}} )
+   {
+      my $attr_get = "get_$attr->{name}_field";
+      my $attr_field = $obj->$attr_get;
+
+      # Test each field foreach
+      foreach my $field ( @{$found_fields{$attr->{type}}} )
+      {
+         defined $field or next;
+
+         my $setter = $Gtk_types->{$attr->{type}}->{setter};
+         my $getter = $Gtk_types->{$attr->{type}}->{getter};
+
+         $field->$setter( 1 );
+         if ( $attr_field->$getter eq 1 )
+         {
+            pass( "Entry field $attr->{name} was displayed" );
+            $field = undef;
+            next ATTR;
+         }
+         else
+         {
+            $field->$setter( 0 );
+         }
+
+      }
+      fail( "Entry field $attr->{name} was not displayed" );
+   }
+
+   # }}}2
+
 }
 
 # }}}1
@@ -365,6 +409,7 @@ test_attributes( 'Vokab::Item::Word::Noun', @noun_attrs );
 test_attributes( 'Vokab::Item::Word::Verb', @verb_attrs );
 test_attributes( 'Vokab::Item::Word::Generic', @generic_attrs );
 
+# Data on entry attributes {{{1
 my $entry_data = [
    {
       class => 'Vokab::Item',
@@ -391,14 +436,13 @@ my $entry_data = [
    {
       class => 'Vokab::Item::Word::Verb',
       attrs => [
-         { 
-            name => 'conjugation',
-            type => "Entry",
-            value => [ qw/ z y x w v u t / ],
-            value => { 
-               ich => 'z', du => 'y', er => 'x', Sie => 'w',
-               wir => 'v', ihr => 'u', sie => 't' },
-         },
+         { name => 'ich', type => "Entry", value => 'z', },
+         { name =>  'du', type => "Entry", value => 'y', },
+         { name =>  'er', type => "Entry", value => 'x', },
+         { name => 'Sie', type => "Entry", value => 'w', },
+         { name => 'wir', type => "Entry", value => 'v', },
+         { name => 'ihr', type => "Entry", value => 'u', },
+         { name => 'sie', type => "Entry", value => 't', },
       ],
    },
    {
@@ -406,8 +450,10 @@ my $entry_data = [
       attrs => [],
    },
 ];
+# }}}1
 
 foreach my $class ( @$entry_data )
 {
    test_entry_field_attributes( $class );
+   test_display_all( $class );
 }
