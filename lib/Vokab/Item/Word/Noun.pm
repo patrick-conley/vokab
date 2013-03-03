@@ -6,7 +6,8 @@ use English qw/ -no-match-vars/;
 use utf8;
 use 5.012;
 
-use Vokab::Types qw/ Gender IntBool Noun /;
+use Vokab::Types qw/ Gender Noun /;
+use MooseX::Types::Moose qw/ Bool /;
 
 # A Vokab::Item::Word::Noun is a noun. It will ordinarilly have a specified
 # gender, and the translation must include the correct pronoun. The plural
@@ -17,7 +18,7 @@ use Moose;
 extends 'Vokab::Item::Word';
 
 has( 'gender'         => ( is => 'rw', isa => Gender, init_arg => undef ) );
-has( 'display_gender' => ( is => 'rw', isa => IntBool, init_arg => undef ) );
+has( 'display_gender' => ( is => 'rw', isa => Bool, init_arg => undef ) );
 has( '+en'             => ( isa => Noun ) );
 has( '+de'             => ( isa => Noun ) );
 

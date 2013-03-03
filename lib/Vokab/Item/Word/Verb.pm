@@ -18,13 +18,13 @@ extends 'Vokab::Item::Word';
 # ihr,er == undef <= er,ihr (at least one must be defined)
 has( 'conjugation' => ( is => 'rw', isa => Verb, init_arg => undef ) );
 
-foreach my $field ( qw/ ich du er Sie wir ihr sie / )
+foreach my $field ( qw/ conjugation / )
 {
    has $field . "_field" => (
       is => 'ro',
       lazy => 1,
-      default => sub { return Gtk2::Entry->new() },
-      isa => "Gtk2::Widget",
+      builder => "_build_${field}_field",
+      isa => "HashRef[Gtk2::Widget]",
       init_arg => undef,
    );
 }
@@ -32,6 +32,24 @@ foreach my $field ( qw/ ich du er Sie wir ihr sie / )
 # A Vokab::Item::Word::Verb is a *conjugated* verb. When entering a new item,
 # each person must be entered, but in selecting a verb only one person is
 # given.
+
+# Method:   _build_conjugation_field {{{1
+# Purpose:  Builder for the conjugation_field attribute
+sub _build_conjugation_field
+{
+   my $self = shift;
+
+   my $conj = {
+      ich => Gtk2::Entry->new(),
+      du => Gtk2::Entry->new(),
+      Sie => Gtk2::Entry->new(),
+      er => Gtk2::Entry->new(),
+      wir => Gtk2::Entry->new(),
+      ihr => Gtk2::Entry->new(),
+      sie => Gtk2::Entry->new(),
+   };
+   return $conj;
+}
 
 # Method:   display_all( box => $box ) {{{1
 # Purpose:  Display entry fields for everything the item needs
@@ -70,19 +88,19 @@ augment display_all => sub
       {
          $conj_row->add( $col );
 
-         $col->pack_start( $self->get_ich_field, 0, 0, 0 );
-         $col->pack_start( $self->get_du_field, 0, 0, 0 );
-         $col->pack_start( $self->get_Sie_field, 0, 0, 0 );
-         $col->pack_start( $self->get_er_field, 0, 0, 0 );
+         $col->pack_start( $self->get_conjugation_field->{ich}, 0, 0, 0 );
+         $col->pack_start( $self->get_conjugation_field->{du}, 0, 0, 0 );
+         $col->pack_start( $self->get_conjugation_field->{Sie}, 0, 0, 0 );
+         $col->pack_start( $self->get_conjugation_field->{er}, 0, 0, 0 );
       }
 
       $col = Gtk2::VBox->new();
       {
          $conj_row->add( $col );
 
-         $col->pack_start( $self->get_wir_field, 0, 0, 0 );
-         $col->pack_start( $self->get_ihr_field, 0, 0, 0 );
-         $col->pack_start( $self->get_sie_field, 0, 0, 0 );
+         $col->pack_start( $self->get_conjugation_field->{wir}, 0, 0, 0 );
+         $col->pack_start( $self->get_conjugation_field->{ihr}, 0, 0, 0 );
+         $col->pack_start( $self->get_conjugation_field->{sie}, 0, 0, 0 );
       }
 
       $col = Gtk2::VBox->new();
@@ -104,10 +122,9 @@ augment set_all => sub
    my $self = shift;
 
    my $conjugation = {};
-   foreach my $key ( qw/ ich du er Sie wir ihr sie / )
+   foreach my $key ( keys $self->get_conjugation_field )
    {
-      my $getter = "get_${key}_field";
-      my $text = $self->$getter->get_text();
+      my $text = $self->get_conjugation_field()->{$key}->get_text();
       $conjugation->{$key} = $text if $text;
    }
 
@@ -127,6 +144,8 @@ augment dump => sub
       inner()
    );
 };
+
+# }}}1
 
 # }}}1
 

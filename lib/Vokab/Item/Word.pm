@@ -6,7 +6,8 @@ use English;
 use utf8;
 use 5.012;
 
-use Vokab::Types qw/Text OptText/;
+use Vokab::Types qw/Text/;
+use MooseX::Types::Moose qw/ Str /;
 
 # A Vokab::Item::Word is a testable object requiring a literal translation of
 # English to Deutsch (although in some cases, a regex may be used to identify
@@ -18,7 +19,7 @@ extends 'Vokab::Item';
 
 has( 'en'        => ( is => 'rw', isa => Text, init_arg => undef ) );
 has( 'de'        => ( is => 'rw', isa => Text, init_arg => undef ) );
-has( 'alternate' => ( is => 'rw', isa => OptText, init_arg => undef ) );
+has( 'alternate' => ( is => 'rw', isa => Str, init_arg => undef ) );
 
 foreach my $field ( qw/ en de alternate / )
 {

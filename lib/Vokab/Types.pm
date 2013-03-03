@@ -10,7 +10,7 @@ use MooseX::Types -declare => [
    qw/ Natural IntBool Real Text OptText Gender Noun Verb EmptyStr/
 ];
 
-use MooseX::Types::Moose qw/ Bool Int Num Str HashRef Undef/;
+use MooseX::Types::Moose qw/ Bool Int Num Str HashRef /;
 
 subtype( Natural, {
       as => Int,
@@ -43,7 +43,7 @@ subtype( EmptyStr, {
 );
 
 subtype( OptText, {
-      as => Text | Undef | EmptyStr,
+      as => Text | EmptyStr,
    }
 );
 

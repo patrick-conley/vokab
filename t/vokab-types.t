@@ -43,8 +43,8 @@ my @type_tests = (
       [ 'a', 'The word', "it's", 'foo-bar' ], # [4]
       [ undef, '1', 'word 1', '& things', '-', "" ] ], # [6]
    [ 'OptText',
-      [ 'a', 'The word', undef, "", "it's", 'foo-bar' ], # [6]
-      [ '1', 'word 1', '& things', '-' ] ], # [4]
+      [ 'a', 'The word', "", "it's", 'foo-bar' ], # [6]
+      [ '1', 'word 1', '& things', '-', undef ] ], # [4]
    [ 'Gender',
       [ 'm', 'n', 'f' ], # [4]
       [ 'a', 'The word', undef, 2, "", 'masculine' ] ], # [5]
