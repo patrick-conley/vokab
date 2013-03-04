@@ -3,7 +3,7 @@ use warnings;
 use English qw/ -no-match-vars /;
 use utf8;
 
-use Test::Most tests => 320;
+use Test::Most tests => 344;
 use Gtk2 '-init';
 
 BEGIN
@@ -34,8 +34,13 @@ my $Gtk_types = {
 };
 
 # Data on entry attributes {{{1
-my $data = [
-   {
+# Notes:
+# - if Gtk_type is defined and attrs->[i]->{bad} is not an empty list, then
+#   the first value in the list *must* be something that Gtk will accept
+#   without errors or warnings. This value is used by test_set_all, and
+#   assumes that it passes Gtk's validation.
+my $data = {
+   'Vokab::Item' => {
       class => 'Vokab::Item',
       attrs => [
          {
@@ -67,7 +72,7 @@ my $data = [
             name => 'chapter', init => 1,
             Gtk_type => "SpinButton", Moose_type => 'Natural',
             good => [ 1 ],
-            bad => [ -1, 'foo' ]
+            bad => []
          },
          {
             name => 'section', init => 1,
@@ -77,7 +82,7 @@ my $data = [
          },
       ],
    },
-   {
+   'Vokab::Item::Word' => {
       class => 'Vokab::Item::Word',
       attrs => [
          {
@@ -100,36 +105,36 @@ my $data = [
          },
       ],
    },
-   {
+   'Vokab::Item::Word::Noun' => {
       class => 'Vokab::Item::Word::Noun',
       attrs => [
          {
             name => 'gender', init => 0,
             Gtk_type => "Entry", Moose_type => 'Gender',
             good => [ 'm', 'f', 'n' ],
-            bad => [ undef, 1, 'a', 'e' ]
+            bad => [ 1, undef, 'a', 'e' ]
          },
          {
             name => 'display_gender', init => 0,
             Gtk_type => "CheckButton", Moose_type => 'Bool',
             good => [ '', 1 ],
-            bad => [ 'foo', -1, ]
+            bad => []
          },
          {
             name => 'en', init => 0,
-            Moose_type => 'Noun',
+            Gtk_type => "Entry", Moose_type => 'Noun',
             good => [ 'foo' ],
             bad => [ 1, 'the foo', undef ]
          }, 
          {
             name => 'de', init => 0,
-            Moose_type => 'Noun',
+            Gtk_type => "Entry", Moose_type => 'Noun',
             good => [ 'bar' ],
             bad => [ 1, 'der bar', 'die bar', 'das bar', undef ]
          }, 
       ],
    },
-   {
+   'Vokab::Item::Word::Verb' => {
       class => 'Vokab::Item::Word::Verb',
       attrs => [
          {
@@ -143,11 +148,11 @@ my $data = [
          },
       ],
    },
-   {
+   'Vokab::Item::Word::Generic' => {
       class => 'Vokab::Item::Word::Generic',
       attrs => [],
    },
-];
+};
 # }}}1
 
 # Function: test_attributes {{{1
@@ -181,7 +186,7 @@ sub test_attributes
          $printable = defined $good_val ? $good_val : "undef";
          $obj = $class->{class}->new();
          lives_ok { $obj->$set( $good_val ) }
-            $class->{class} . "->set_$attr->{name}( $printable ) succeeds";
+            "set_$attr->{name}( $printable ) succeeds";
          is( $obj->$get, $good_val, "get_$attr->{name} returns $printable" );
       }
 
@@ -192,7 +197,7 @@ sub test_attributes
          $obj = $class->{class}->new();
          throws_ok { $obj->$set( $bad_val ) }
             qr/\($attr->{name}\) does not pass the type constraint/,
-            $class->{class} . "->set_$attr->{name}( $printable ) dies";
+            "set_$attr->{name}( $printable ) dies";
          is( $obj->$get, undef, "get_$attr->{name} fails to undef" );
       }
 
@@ -207,8 +212,7 @@ sub test_attributes
             lives_ok {
                   $obj = $class->{class}->new( $attr->{name} => $good_val )
                }
-               "$class->{class}->new( $attr->{name} => $printable ) "
-               . " ($attr->{Moose_type}) runs";
+               "new( $attr->{name} => $printable ) ($attr->{Moose_type}) runs";
             is( $obj->$get, $good_val, "new( $attr->{name} => $printable ) "
                . "works" );
          }
@@ -218,11 +222,10 @@ sub test_attributes
          {
             $printable = defined $bad_val ? $bad_val : "undef";
             dies_ok { $class->{class}->new( $attr->{name} => $bad_val ) }
-               $class->{class} . "->new( $attr->{name} => $printable ) "
-               . "($attr->{Moose_type}) dies";
+               "new( $attr->{name} => $printable ) ($attr->{Moose_type}) dies";
             throws_ok { $class->{class}->new( $attr->{name} => $bad_val ) }
                qr/\($attr->{name}\) does not pass the type constraint/,
-               $class->{class} .  "->new( $attr->{name} => $printable ) "
+               "new( $attr->{name} => $printable ) "
                . "throws an appropriate exception";
          }
       }
@@ -233,8 +236,7 @@ sub test_attributes
          {
             $printable = defined $val ? $val : "undef";
             lives_ok { $obj = $class->{class}->new( $attr->{name} => $val ) }
-               "$class->{class}->new( $attr->{name} => $printable ) " .
-               "($attr->{Moose_type}) runs";
+               "new( $attr->{name} => $printable ) ($attr->{Moose_type}) runs";
             is( $obj->$get, undef, "get_$attr->{name} returns undef" );
          }
       }
@@ -256,7 +258,6 @@ sub test_attributes
 sub test_entry_field_attributes
 {
    my $class = shift;
-
    my $obj = $class->{class}->new();
    
    foreach my $attr ( grep { defined $ARG->{Gtk_type} } @{$class->{attrs}} )
@@ -296,6 +297,7 @@ sub test_entry_field_attributes
    }
 }
 
+# Function: test_gtk_accessor {{{2
 sub test_gtk_accessor
 {
    my $gtk_obj = shift; # Gtk object whose accessors are to be tested
@@ -310,13 +312,18 @@ sub test_gtk_accessor
    lives_ok { $gtk_obj->$getter } "$name getter runs";
    is( $gtk_obj->$getter, $value, "$name accessors work" );
 }
+# }}}2
 
 # Function: test_display_all {{{1
 # Purpose:  Test the method display_all
-# Tests:    ??
-# Input:    (string) The class name
-#           (hashref) datatype of each attribute
-#           (hashref) some information about each datatype
+# Input:    (hashref) {
+#              class => class_name,
+#              attrs => [
+#                 name => attr_name, init => set from new()?,
+#                 Gtk_type => Gtk2::Object desc., Moose_type => type,
+#                 good => [ list of valid values ],
+#                 bad => [ list of bad attrs ],
+#              ] }
 sub test_display_all
 {
    my $class = shift;
@@ -325,8 +332,7 @@ sub test_display_all
    my $main_box = Gtk2::VBox->new();
 
    # display_all makes $box the root of an arbitrarily large tree
-   lives_ok { $obj->display_all( box => $main_box ) }
-      "$class->{class}->new runs";
+   lives_ok { $obj->display_all( box => $main_box ) } "display_all() runs";
 
    my @boxes_to_test = $main_box;
    my $found_fields; # Hash of Gtk types containing lists of matched fields
@@ -364,9 +370,9 @@ sub test_display_all
       # Find a match in the fields from the $main_box
       if ( $attr->{Gtk_type} =~ /^HashRef/ )
       {
+         my ( $type ) = $attr->{Gtk_type} =~ /\[(.*)]/;
          foreach my $key ( keys $attr->{good}->[0] )
          {
-            my ( $type ) = $attr->{Gtk_type} =~ /\[(.*)]/;
             match_field_to_attr( $found_fields, $attr_field->{$key}, $type,
                "$attr->{name} ($key)" );
          }
@@ -412,15 +418,135 @@ sub match_field_to_attr
    return 0;
 }
 
+# }}}2
+
+# Function: test_set_all {{{1
+# Purpose:  Test the method set_all
+# Input:    (hashref) {
+#              class => class_name,
+#              attrs => [ {
+#                 name => attr_name, init => set from new()?,
+#                 Gtk_type => Gtk2::Object desc., Moose_type => type,
+#                 good => [ list of valid values ],
+#                 bad => [ list of bad attrs ],
+#                 } ] }
+sub test_set_all
+{
+   my $class = shift;
+   my @gtk_attrs = grep { defined $ARG->{Gtk_type} } @{$class->{attrs}};
+
+   # Test set_all works with properly-set fields {{{2
+   my $obj = $class->{class}->new();
+   set_ancestor_fields( $obj, $class->{class} );
+   set_field( $obj, $ARG, 'good' ) foreach ( @gtk_attrs );
+
+   lives_ok { $obj->set_all() } "set_all runs";
+
+   foreach my $attr ( @gtk_attrs )
+   {
+      my $get = "get_$attr->{name}";
+      is_deeply( $obj->$get, $attr->{good}->[0],
+         "$attr->{name} was set correctly" );
+   }
+
+   # Test set_all fails with improperly-set fields {{{2
+   for my $i ( 0..(@gtk_attrs-1) )
+   {
+      # Make sure there is a failing value we can set to!
+      @{$gtk_attrs[$i]->{bad}} or next;
+      my @passing_attrs = grep { $ARG != $gtk_attrs[$i] } @gtk_attrs;
+
+      # Set all attributes to passing values
+      $obj = $class->{class}->new();
+      set_ancestor_fields( $obj, $class->{class} );
+      set_field( $obj, $ARG, 'good' ) foreach ( @passing_attrs );
+
+      # Set one attribute to a value that will fail in Moose; this value must
+      # pass Gtk's type-checking
+      my $bad_attr = $gtk_attrs[$i];
+      set_field( $obj, $bad_attr, 'bad' );
+
+      # Test that set_all fails
+      dies_ok { $obj->set_all() }
+         "set_all fails with invalid $gtk_attrs[$i]->{name}";
+   }
+   # }}}2
+}
+
+# Function: set_ancestor_fields {{{2
+# Purpose:  Set all Gtk fields of the class's ancestors to passing values
+# Input:    (object) Vokab::Item::* object
+#           (string) Full classname of the object
+sub set_ancestor_fields
+{
+   my $obj = shift;
+   my $classname = shift;
+
+   my $parent = $classname =~ s/::\w*$//r;
+   if ( $parent =~ /^Vokab::Item::.*/ )
+   {
+      set_ancestor_fields( $obj, $parent );
+   }
+
+   my $class_data = $data->{$parent};
+
+   my @gtk_attrs = grep { defined $ARG->{Gtk_type} } @{$class_data->{attrs}};
+   set_field( $obj, $ARG, 'good' ) foreach ( @gtk_attrs );
+}
+
+# Function: set_field {{{2
+# Purpose:  Set a Gtk attribute, independent of whether it is a scalar or
+#           hashref
+# Input:    (Vokab::Item::*) object in which to set a Gtk attribute
+#           (hashref): Data on an attribute
+#           (scalar): Value to set the attribute to: good (true) or bad
+#           (false)
+sub set_field
+{
+   my $obj = shift;
+   my $attr = shift;
+
+   my $get = "get_$attr->{name}_field";
+   my $field = $obj->$get;
+
+   # Coerce value-to-set-to to something usable by $attr
+   my $good = shift;
+   if ( $good !~ /good|bad/ )
+   {
+      $good = $good ? "good" : "bad";
+   }
+
+
+   if ( $attr->{Gtk_type} =~ /^HashRef/ && ref $attr->{$good}->[0] eq "HASH" )
+   {
+      my ( $type ) = $attr->{Gtk_type} =~ /\[(.*)]/;
+      my $set = $Gtk_types->{$type}->{setter};
+
+      foreach my $key ( keys $attr->{$good}->[0] )
+      {
+         if ( defined $attr->{$good}->[0]->{$key} )
+         {
+            $field->{$key}->$set( $attr->{$good}->[0]->{$key} );
+         }
+      }
+   }
+   else
+   {
+      my $set = $Gtk_types->{$attr->{Gtk_type}}->{setter};
+      $field->$set( $attr->{$good}->[0] );
+   }
+}
+
 # }}}1
 
-foreach my $class ( @$data )
+foreach my $class ( keys %$data )
 {
-   my $name = $class->{class};
-   lives_ok { $name->new() } "$name->new() runs";
-   isa_ok( $name->new(), $name, "$name->new() works" );
+   diag( $class );
+   lives_ok { $class->new() } "$class->new() runs";
+   isa_ok( $class->new(), $class, "$class->new() works" );
 
-   test_attributes( $class );
-   test_entry_field_attributes( $class );
-   test_display_all( $class );
+   test_attributes( $data->{$class} );             # Test raw attributes 
+   test_entry_field_attributes( $data->{$class} ); # Test Gtk attributes
+   test_display_all( $data->{$class} );           # Test Gtk attrs are drawn
+   test_set_all( $data->{$class} );         # Raw attrs are set from Gtk attrs
 }

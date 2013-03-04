@@ -104,9 +104,7 @@ augment set_all => sub
    my $self = shift;
 
    $self->set_gender( $self->get_gender_field()->get_text() );
-   $self->set_display_gender(
-      $self->get_display_gender_field()->get_active() || 0
-   );
+   $self->set_display_gender( $self->get_display_gender_field()->get_active() );
 };
 
 # Method:   dump() {{{1
