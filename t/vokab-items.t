@@ -3,7 +3,7 @@ use warnings;
 use English qw/ -no-match-vars /;
 use utf8;
 
-use Test::Most tests => 344;
+use Test::Most tests => 346;
 use Gtk2 '-init';
 
 BEGIN
@@ -97,12 +97,6 @@ my $data = {
             good => [ 'bar', 'der bar' ],
             bad => [ 1, undef ]
          },
-         {
-            name => 'alternate', init => 0,
-            Gtk_type => "Entry", Moose_type => 'Str',
-            good => [ '/(foo|bar)+/', '' ],
-            bad => []
-         },
       ],
    },
    'Vokab::Item::Word::Noun' => {
@@ -150,7 +144,14 @@ my $data = {
    },
    'Vokab::Item::Word::Generic' => {
       class => 'Vokab::Item::Word::Generic',
-      attrs => [],
+      attrs => [
+         {
+            name => 'alternate', init => 0,
+            Gtk_type => "Entry", Moose_type => 'Str',
+            good => [ '/(foo|bar)+/', '' ],
+            bad => []
+         },
+      ],
    },
 };
 # }}}1
@@ -550,3 +551,29 @@ foreach my $class ( keys %$data )
    test_display_all( $data->{$class} );           # Test Gtk attrs are drawn
    test_set_all( $data->{$class} );         # Raw attrs are set from Gtk attrs
 }
+
+# Extra tests on Vokab::Item::Word::Verb->set_all {{{1
+# It has default values for some conjugation keys
+
+{
+   my $in = { 
+      en => 'foo',
+      de => 'bar',
+      conjugation => { ich => 'foo', du => 'foo', er => 'baz' }
+   };
+   my $out = { ich => 'foo', du => 'foo', er => 'baz',
+      wir => 'bar', ihr => 'baz', sie => 'bar', Sie => 'bar' };
+
+   my $obj = Vokab::Item::Word::Verb->new();
+   $obj->get_en_field->set_text( $in->{en} );
+   $obj->get_de_field->set_text( $in->{de} );
+   foreach my $key ( keys %{$in->{conjugation}} )
+   {
+      $obj->get_conjugation_field->{$key}->set_text( $in->{conjugation}->{$key} );
+   }
+
+   lives_ok { $obj->set_all } "set_all runs on Verb with minimal fields set";
+   is_deeply( $obj->get_conjugation, $out, "set_all fills unset people" );
+}
+
+

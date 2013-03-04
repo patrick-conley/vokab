@@ -16,6 +16,7 @@ extends 'Vokab::Item::Word';
 # Some keys can be autodefined:
 # wir,sie,Sie == undef <= infinitive
 # ihr,er == undef <= er,ihr (at least one must be defined)
+# TODO: ihr and er sometimes differ. This leaves me open to errors…
 has( 'conjugation' => ( is => 'rw', isa => Verb, init_arg => undef ) );
 
 foreach my $field ( qw/ conjugation / )
@@ -121,14 +122,26 @@ augment set_all => sub
 {
    my $self = shift;
 
-   my $conjugation = {};
+   my $conj = {};
    foreach my $key ( keys $self->get_conjugation_field )
    {
       my $text = $self->get_conjugation_field()->{$key}->get_text();
-      $conjugation->{$key} = $text if $text;
+      $conj->{$key} = $text if $text;
    }
 
-   $self->set_conjugation( $conjugation );
+   # Set autodefinable keys
+
+   # wir/sie/Sie
+   foreach my $key ( grep { ! defined $conj->{$ARG} } qw/ wir sie Sie / )
+   {
+      $conj->{$key} = $self->get_de;
+   }
+
+   # er/ihr
+   $conj->{er} = $conj->{ihr} if ( ! defined $conj->{er} );
+   $conj->{ihr} = $conj->{er} if ( ! defined $conj->{ihr} );
+
+   $self->set_conjugation( $conj );
 };
 
 # Method:   dump() {{{1

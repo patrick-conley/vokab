@@ -7,7 +7,6 @@ use utf8;
 use 5.012;
 
 use Vokab::Types qw/Text/;
-use MooseX::Types::Moose qw/ Str /;
 
 # A Vokab::Item::Word is a testable object requiring a literal translation of
 # English to Deutsch (although in some cases, a regex may be used to identify
@@ -19,9 +18,8 @@ extends 'Vokab::Item';
 
 has( 'en'        => ( is => 'rw', isa => Text, init_arg => undef ) );
 has( 'de'        => ( is => 'rw', isa => Text, init_arg => undef ) );
-has( 'alternate' => ( is => 'rw', isa => Str, init_arg => undef ) );
 
-foreach my $field ( qw/ en de alternate / )
+foreach my $field ( qw/ en de / )
 {
    has $field . "_field" => (
       is => 'ro',
@@ -52,19 +50,6 @@ sub _build_de_field
    return $entry;
 }
 
-# Method:   _build_alternate_field {{{1
-# Purpose:  Builder for the alternate_field attribute
-sub _build_alternate_field
-{
-   my $self = shift;
-
-   my $entry = Gtk2::Entry->new();
-   $entry->set_tooltip_text(
-      "A regex matching all possible correct answers (optional)"
-   );
-   return $entry;
-}
-
 # Method:   display_all( box => $box ) {{{1
 # Purpose:  Display entry fields for everything the item needs
 # Input:    (Gtk::VBox) a box to hold everything
@@ -84,12 +69,10 @@ augment display_all => sub
    # Col: Labels
    $table[0]->add( Gtk2::Label->new( "English" ) );
    $table[0]->add( Gtk2::Label->new( "Deutsch" ) );
-   $table[0]->add( Gtk2::Label->new( "Alternate" ) );
 
    # Col: English & Deutsch entries
    $table[1]->add( $self->get_en_field );
    $table[1]->add( $self->get_de_field );
-   $table[1]->add( $self->get_alternate_field );
 
    inner();
 };
@@ -101,7 +84,6 @@ augment set_all => sub
    my $self = shift;
    $self->set_en( $self->get_en_field()->get_text() );
    $self->set_de( $self->get_de_field()->get_text() );
-   $self->set_alternate( $self->get_alternate_field()->get_text() );
 
    inner();
 };
@@ -115,7 +97,6 @@ augment dump => sub
    my %attrs;
    $attrs{en} = $self->get_en if $self->get_en;
    $attrs{de} = $self->get_de if $self->get_de;
-   $attrs{alternate} = $self->get_alternate if $self->get_alternate;
 
    return (
       %attrs,
