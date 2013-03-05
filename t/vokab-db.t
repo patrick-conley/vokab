@@ -4,7 +4,7 @@ use English qw/ -no-match-vars/;
 use utf8;
 use 5.012;
 
-use Test::Most tests => 7;
+use Test::Most tests => 10;
 use File::Temp;
 
 BEGIN {
@@ -49,9 +49,20 @@ throws_ok { $db->create_db } qr/table \w* already exists/,
    "Don't clobber the DB";
    
 # Test prepared functions {{{1
-cmp_deeply( $db->readall_item_types(), [
+is_deeply( $db->readall_item_types(), [
       [ 'Noun', 'Vokab::Item::Word::Noun' ],
       [ 'Verb', 'Vokab::Item::Word::Verb' ],
       [ 'Generic', 'Vokab::Item::Word::Generic' ],
    ],
-   "Method readall_item_types" );
+   "->readall_item_types works" );
+
+is( $db->read_chapter_title( 0 ), undef,
+   "->read_chapter_title works (undefined chapter)" );
+
+$db->dbh->do(
+   "INSERT INTO Chapters VALUES( 0, 'Introduction'), ( 1, 'Einführung' );"
+);
+is( $db->read_chapter_title( 0 ), "Introduction", 
+   "->read_chapter_title works (defined chapter)" );
+is( $db->read_chapter_title( 1 ), "Einführung",
+   "->read_chapter_title works (defined chapter with Unicode)" );

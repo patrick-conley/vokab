@@ -55,6 +55,7 @@ sub _build_conjugation_field
 # Method:   display_all( box => $box ) {{{1
 # Purpose:  Display entry fields for everything the item needs
 # Input:    (Gtk::VBox) a box to hold everything
+# Return:   (array) Contents of a label describing what should be entered
 augment display_all => sub
 {
    # Get args
@@ -64,13 +65,13 @@ augment display_all => sub
       }
    );
 
-   # Append a comment to the language row
-   my @rows = $args{box}->get_children();
-   $rows[-1]->add( Gtk2::Label->new( "Infinitive goes here!" ) );
+   my $label = Gtk2::Label->new(
+      'Enter the conjugation for simple present in Deutsch. "Wir"/"sie"/"Sie"'
+      . 'and "ihr" will be computed from the infinitive and "er" if they are'
+      . 'left blank' );
+   $label->set_line_wrap(1);
 
-   $args{box}->add( Gtk2::Label->new(
-         "Enter the conjugation for simple present in Deutsch:" )
-   );
+   $args{box}->add( $label );
 
    my $conj_row = Gtk2::HBox->new();
    {
@@ -81,8 +82,8 @@ augment display_all => sub
          $conj_row->add( $col );
          $col->add( Gtk2::Label->new( "ich" ) );
          $col->add( Gtk2::Label->new( "du" ) );
-         $col->add( Gtk2::Label->new( "Sie" ) );
          $col->add( Gtk2::Label->new( "er" ) );
+         $col->add( Gtk2::Label->new( "" ) );
       }
 
       $col = Gtk2::VBox->new();
@@ -91,7 +92,6 @@ augment display_all => sub
 
          $col->pack_start( $self->get_conjugation_field->{ich}, 0, 0, 0 );
          $col->pack_start( $self->get_conjugation_field->{du}, 0, 0, 0 );
-         $col->pack_start( $self->get_conjugation_field->{Sie}, 0, 0, 0 );
          $col->pack_start( $self->get_conjugation_field->{er}, 0, 0, 0 );
       }
 
@@ -102,6 +102,7 @@ augment display_all => sub
          $col->pack_start( $self->get_conjugation_field->{wir}, 0, 0, 0 );
          $col->pack_start( $self->get_conjugation_field->{ihr}, 0, 0, 0 );
          $col->pack_start( $self->get_conjugation_field->{sie}, 0, 0, 0 );
+         $col->pack_start( $self->get_conjugation_field->{Sie}, 0, 0, 0 );
       }
 
       $col = Gtk2::VBox->new();
@@ -110,10 +111,12 @@ augment display_all => sub
          $col->add( Gtk2::Label->new( "wir" ) );
          $col->add( Gtk2::Label->new( "ihr" ) );
          $col->add( Gtk2::Label->new( "sie" ) );
-         $col->add( Gtk2::Label->new( "" ) );
+         $col->add( Gtk2::Label->new( "Sie" ) );
       }
 
    }
+
+   return ( '"en" and "de" fields should contain the infinitive', inner() );
 };
 
 # Method:   set_all() {{{1

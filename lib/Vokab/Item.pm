@@ -6,11 +6,12 @@ use English qw/ -no-match-vars/;
 use utf8;
 use 5.012;
 
-use Vokab::Types qw/Natural OptText Real/;
+use Vokab::Types qw/Natural OptText Real Text/;
 
 # A Vokab::Item is meant to be used for any testable object.
 
 use Gtk2;
+use Data::Dumper;
 use Params::Validate;
 
 use Moose;
@@ -40,11 +41,12 @@ has( 'class' => ( is => 'rw', isa => 'ClassName', init_arg => undef ) );
 has( 'tests' => ( is => 'rw', isa => Natural, init_arg => undef ) );
 has( 'success' => ( is => 'rw', isa => Natural, init_arg => undef ) );
 has( 'score' => ( is => 'rw', isa => Real, init_arg => undef ) );
+has( 'title' => ( is => 'rw', isa => Text, init_arg => undef ) );
 
 has( 'chapter' => ( is => 'rw', isa => Natural ) );
 has( 'section' => ( is => 'rw', isa => OptText ) );
 
-foreach my $field ( qw/ chapter section / )
+foreach my $field ( qw/ chapter section title / )
 {
    has $field . "_field" => (
       is => 'ro',
@@ -62,6 +64,8 @@ sub _build_chapter_field
    my $self = shift;
 
    my $entry = Gtk2::SpinButton->new_with_range( 0, 100, 1 );
+   # Must connect the signal handler before setting the value
+   $entry->signal_connect( changed => \&set_chapter_title, $self );
    $entry->set_value( $self->get_chapter ) if $self->get_chapter;
    return $entry;
 }
@@ -74,6 +78,16 @@ sub _build_section_field
 
    my $entry = Gtk2::Entry->new();
    $entry->set_text( $self->get_section ) if $self->get_section;
+   return $entry;
+}
+
+# Method:   _build_title_field {{{1
+# Purpose:  Builder for the title_field attribute
+sub _build_title_field
+{
+   my $self = shift;
+
+   my $entry = Gtk2::Entry->new();
    return $entry;
 }
 
@@ -115,6 +129,7 @@ sub display_all
          {
             $col->add( $row );
             $row->pack_start( $self->get_chapter_field, 0, 0, 0 );
+            $row->add( $self->get_title_field );
          }
 
          $col->add( $self->get_section_field );
@@ -125,7 +140,14 @@ sub display_all
 
    }
 
+   # Divider to separate chapter/section from type-specific content
    $args{box}->pack_start( Gtk2::HSeparator->new(), 0, 0, 0 );
+
+   # Add a descriptive label
+   my $label = Gtk2::Label->new();
+   $label->set_line_wrap(1);
+   $label->set_alignment( 0.1, 0.5 );
+   $args{box}->pack_start( $label, 0, 0, 0 );
 
    # children's table
    $table = Gtk2::HBox->new();
@@ -134,11 +156,10 @@ sub display_all
       $table->set_homogeneous( 0 );
       
       $table->pack_start( Gtk2::VBox->new(), 0, 0, 0 );
-      $table->pack_start( Gtk2::VBox->new(), 0, 0, 0 );
-      $table->pack_start( Gtk2::VBox->new(), 0, 0, 0 );
+      $table->add( Gtk2::VBox->new() );
    }
 
-   inner();
+   $label->set_text( join( "\n", inner() ) );
 }
 
 # Method:   set_all() {{{1
@@ -147,8 +168,9 @@ sub set_all
 {
    my $self = shift;
 
-   $self->set_chapter( $self->get_chapter_field()->get_value_as_int() );
-   $self->set_section( $self->get_section_field()->get_text() );
+   $self->set_chapter( $self->get_chapter_field->get_value_as_int );
+   $self->set_section( $self->get_section_field->get_text );
+   $self->set_title( $self->get_title_field->get_text );
    $self->set_tests( 0 );
    $self->set_success( 0 );
    $self->set_score( 0.8 );
@@ -165,11 +187,38 @@ sub dump
    my %attrs;
    $attrs{chapter} = $self->get_chapter if $self->get_chapter;
    $attrs{section} = $self->get_section if $self->get_section;
+   $attrs{title}   = $self->get_title   if $self->get_title;
 
    return (
       %attrs,
       inner()
    );
+}
+
+# Callback: set_chapter_title {{{1
+# Purpose:  Called when the chapter # is changed. If the chapter exists in the
+#           DB, the title is set accordingly and desensitized; if it doesn't,
+#           the title is cleared and sensitized
+# Input:    Calling widget (chapter_field)
+sub set_chapter_title
+{
+   my ( $chapter, $self ) = @ARG;
+
+   my $title = $self->dbh->read_chapter_title( $chapter->get_value_as_int );
+   if ( defined $title )
+   {
+      $self->log->info( "Setting chapter title to $title" );
+      $self->get_title_field->set_text( $title );
+      $self->get_title_field->set_sensitive(0);
+   }
+   else
+   {
+      $self->log->info( "Unsetting chapter title" );
+      $self->get_title_field->set_text( '' );
+      $self->get_title_field->set_sensitive(1);
+   }
+
+   return 0;
 }
 
 # }}}1

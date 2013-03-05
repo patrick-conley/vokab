@@ -49,14 +49,14 @@ sub _init_dbh
 {
    my $self = shift;
    
-   my $dbh = DBI->connect( "dbi:SQLite:dbname=" . $self->get_dbname()
-		. ":sqlite_unicode=1",
+   my $dbh = DBI->connect( "dbi:SQLite:dbname=" . $self->get_dbname(),
       "", "", {
  #          RaiseError => 1,
          HandleError => $self->get_error_handler,
          AutoCommit => 1,
       } ) or $self->log->alert( $DBI::errstr );
 
+   $dbh->{sqlite_unicode} = 1;
 	$dbh->do( "PRAGMA foreign_keys = ON" );
 
 	return $dbh;
@@ -158,7 +158,6 @@ EOT
          id INTEGER,
          en TEXT NOT NULL,
          de TEXT NOT NULL,
-         match TEXT,
          FOREIGN KEY(id) REFERENCES Items(id)
       );
 EOT
@@ -191,6 +190,7 @@ EOT
    $self->dbh->do( <<EOT
       CREATE TABLE Generic(
          id INTEGER,
+         alternate TEXT,
          FOREIGN KEY(id) REFERENCES Items(id)
       );
 EOT
@@ -207,7 +207,23 @@ sub readall_item_types
 {
    my $self = shift;
 
-   return $self->dbh->selectall_arrayref( "select name, class from Types;" );
+   return $self->dbh->selectall_arrayref( "SELECT name, class FROM Types;" );
+}
+
+# Function: read_chapter_title {{{1
+sub read_chapter_title
+{
+   my $self = shift;
+   my ( $ch ) = Params::Validate::validate_pos( @_,
+      { type => Params::Validate::SCALAR, regex => qr/^\d+$/ }
+   );
+
+   state $sth = $self->dbh->prepare(
+      "SELECT title FROM Chapters WHERE Chapter = ?"
+   );
+   $sth->execute( $ch );
+
+   return $sth->fetchall_arrayref->[0]->[0];
 }
 
 # }}}1

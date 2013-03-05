@@ -3,8 +3,11 @@ use warnings;
 use English qw/ -no-match-vars /;
 use utf8;
 
-use Test::Most tests => 346;
+use Test::Most tests => 376;
 use Gtk2 '-init';
+use File::Temp;
+
+use Vokab::DB;
 
 BEGIN
 {
@@ -80,6 +83,12 @@ my $data = {
             good => [ 'foo', '' ],
             bad => [ 1 ]
          },
+         {
+            name => 'title', init => 0,
+            Gtk_type => "Entry", Moose_type => 'Text',
+            good => [ 'foo' ],
+            bad => [ 1, '' ]
+         }
       ],
    },
    'Vokab::Item::Word' => {
@@ -156,6 +165,23 @@ my $data = {
 };
 # }}}1
 
+# Set up the DB {{{1
+# Handler:  handle_exceptions_fallback() {{{2
+# Purpose:  A fallback from the default, GUI exception handler.
+sub handle_exceptions_fallback
+{
+   die shift;
+}
+# }}}2
+
+my $Dbh = Vokab::DB->new(
+   dbname => File::Temp::tempdir() . "/vokab.db",
+   error_handler => \&handle_exceptions_fallback
+);
+$Dbh->create_db;
+
+# }}}1
+
 # Function: test_attributes {{{1
 # Purpose:  Test class initializers and accessors.
 # Input:    (hashref) {
@@ -185,7 +211,7 @@ sub test_attributes
       foreach my $good_val ( @{$attr->{good}} )
       {
          $printable = defined $good_val ? $good_val : "undef";
-         $obj = $class->{class}->new();
+         $obj = $class->{class}->new( dbh => $Dbh );
          lives_ok { $obj->$set( $good_val ) }
             "set_$attr->{name}( $printable ) succeeds";
          is( $obj->$get, $good_val, "get_$attr->{name} returns $printable" );
@@ -195,7 +221,7 @@ sub test_attributes
       foreach my $bad_val ( @{$attr->{bad}} )
       {
          $printable = defined $bad_val ? $bad_val : "undef";
-         $obj = $class->{class}->new();
+         $obj = $class->{class}->new( dbh => $Dbh );
          throws_ok { $obj->$set( $bad_val ) }
             qr/\($attr->{name}\) does not pass the type constraint/,
             "set_$attr->{name}( $printable ) dies";
@@ -211,7 +237,7 @@ sub test_attributes
          {
             $printable = defined $good_val ? $good_val : "undef";
             lives_ok {
-                  $obj = $class->{class}->new( $attr->{name} => $good_val )
+                  $obj = $class->{class}->new( dbh => $Dbh, $attr->{name} => $good_val )
                }
                "new( $attr->{name} => $printable ) ($attr->{Moose_type}) runs";
             is( $obj->$get, $good_val, "new( $attr->{name} => $printable ) "
@@ -222,9 +248,9 @@ sub test_attributes
          foreach my $bad_val ( @{$attr->{bad}} )
          {
             $printable = defined $bad_val ? $bad_val : "undef";
-            dies_ok { $class->{class}->new( $attr->{name} => $bad_val ) }
+            dies_ok { $class->{class}->new( dbh => $Dbh, $attr->{name} => $bad_val ) }
                "new( $attr->{name} => $printable ) ($attr->{Moose_type}) dies";
-            throws_ok { $class->{class}->new( $attr->{name} => $bad_val ) }
+            throws_ok { $class->{class}->new( dbh => $Dbh, $attr->{name} => $bad_val ) }
                qr/\($attr->{name}\) does not pass the type constraint/,
                "new( $attr->{name} => $printable ) "
                . "throws an appropriate exception";
@@ -236,7 +262,7 @@ sub test_attributes
          foreach my $val ( qw/ 1 foo /, undef )
          {
             $printable = defined $val ? $val : "undef";
-            lives_ok { $obj = $class->{class}->new( $attr->{name} => $val ) }
+            lives_ok { $obj = $class->{class}->new( dbh => $Dbh, $attr->{name} => $val ) }
                "new( $attr->{name} => $printable ) ($attr->{Moose_type}) runs";
             is( $obj->$get, undef, "get_$attr->{name} returns undef" );
          }
@@ -259,7 +285,7 @@ sub test_attributes
 sub test_entry_field_attributes
 {
    my $class = shift;
-   my $obj = $class->{class}->new();
+   my $obj = $class->{class}->new( dbh => $Dbh );
    
    foreach my $attr ( grep { defined $ARG->{Gtk_type} } @{$class->{attrs}} )
    {
@@ -329,7 +355,7 @@ sub test_display_all
 {
    my $class = shift;
 
-   my $obj = $class->{class}->new();
+   my $obj = $class->{class}->new( dbh => $Dbh );
    my $main_box = Gtk2::VBox->new();
 
    # display_all makes $box the root of an arbitrarily large tree
@@ -437,7 +463,7 @@ sub test_set_all
    my @gtk_attrs = grep { defined $ARG->{Gtk_type} } @{$class->{attrs}};
 
    # Test set_all works with properly-set fields {{{2
-   my $obj = $class->{class}->new();
+   my $obj = $class->{class}->new( dbh => $Dbh );
    set_ancestor_fields( $obj, $class->{class} );
    set_field( $obj, $ARG, 'good' ) foreach ( @gtk_attrs );
 
@@ -458,7 +484,7 @@ sub test_set_all
       my @passing_attrs = grep { $ARG != $gtk_attrs[$i] } @gtk_attrs;
 
       # Set all attributes to passing values
-      $obj = $class->{class}->new();
+      $obj = $class->{class}->new( dbh => $Dbh );
       set_ancestor_fields( $obj, $class->{class} );
       set_field( $obj, $ARG, 'good' ) foreach ( @passing_attrs );
 
@@ -559,21 +585,50 @@ foreach my $class ( keys %$data )
    my $in = { 
       en => 'foo',
       de => 'bar',
-      conjugation => { ich => 'foo', du => 'foo', er => 'baz' }
+      conjugation => { ich => 'foo', du => 'foo', er => 'baz' },
+      title => 'baz',
    };
    my $out = { ich => 'foo', du => 'foo', er => 'baz',
       wir => 'bar', ihr => 'baz', sie => 'bar', Sie => 'bar' };
 
-   my $obj = Vokab::Item::Word::Verb->new();
+   my $obj = Vokab::Item::Word::Verb->new( dbh => $Dbh );
    $obj->get_en_field->set_text( $in->{en} );
    $obj->get_de_field->set_text( $in->{de} );
+   $obj->get_title_field->set_text( $in->{title} );
    foreach my $key ( keys %{$in->{conjugation}} )
    {
       $obj->get_conjugation_field->{$key}->set_text( $in->{conjugation}->{$key} );
    }
 
-   lives_ok { $obj->set_all } "set_all runs on Verb with minimal fields set";
-   is_deeply( $obj->get_conjugation, $out, "set_all fills unset people" );
+   lives_ok { $obj->set_all }
+      "Verb->set_all runs on Verb with minimal fields set";
+   is_deeply( $obj->get_conjugation, $out, "Vorb->set_all fills unset people" );
 }
 
+# Extra tests on Vokab::Item::title {{{1
+# It is set by a signal handler on changing the chapter
+{
+   $Dbh->dbh->do(
+      "INSERT INTO Chapters VALUES( 0, 'Introduction'), ( 1, 'Einführung' );"
+   );
 
+   my $obj = Vokab::Item->new( dbh => $Dbh );
+   lives_ok { $obj->get_chapter_field->set_value( 2 ) }
+      "Item->set_chapter callback runs (chapter with no title)";
+   is( $obj->get_title_field->get_text, "", "Item::title is unset" );
+   ok( $obj->get_title_field->get_sensitive, "Item::title can be edited" );
+
+   lives_ok { $obj->get_chapter_field->set_value( 0 ) }
+      "Item->set_chapter callback runs (chapter with a title)";
+   is( $obj->get_title_field->get_text, "Introduction",
+      "Item::title is properly set" );
+   ok( ! $obj->get_title_field->get_sensitive,
+      "Item::title cannot be edited" );
+
+   lives_ok { $obj->get_chapter_field->set_value( 1 ) }
+      "Item->set_chapter callback runs (chapter with a Unicode title)";
+   is( $obj->get_title_field->get_text, "Einführung",
+      "Item::title is properly set" );
+   ok( ! $obj->get_title_field->get_sensitive,
+      "Item::title cannot be edited" );
+}

@@ -59,6 +59,7 @@ sub _build_display_gender_field
 # Method:   display_all( box => $box ) {{{1
 # Purpose:  Display entry fields for everything the item needs
 # Input:    (Gtk::VBox) a box to hold everything
+# Return:   (array) Contents of a label describing what should be entered
 augment display_all => sub
 {
    # Get args
@@ -88,13 +89,8 @@ augment display_all => sub
       $row->add( $self->get_display_gender_field );
    }
 
-   # Col: Comment
-   $table[2]->pack_start( Gtk2::Label->new( 
-         "Don't include any article\n('the', 'der', 'die', or 'das')" ),
-      0, 0, 0
-   );
-
-   inner();
+   return ( '"en" and "de" fields should not include the article '
+      . '("the", "der", "die", or "das")', inner() );
 };
 
 # Method:   set_all() {{{1

@@ -8,8 +8,8 @@ use 5.012;
 
 use MooseX::Types::Moose qw/ Str /;
 
-# A Vokab::Item::Word::Generic is meant to capture words with no special
-# properties. It doesn't correspond to a DB table
+# A Vokab::Item::Word::Generic is meant to capture words or phrases with no
+# special properties.
 
 use Moose;
 extends 'Vokab::Item::Word';
@@ -43,6 +43,7 @@ sub _build_alternate_field
 # Method:   display_all( box => $box ) {{{1
 # Purpose:  Display entry fields for everything the item needs
 # Input:    (Gtk::VBox) a box to hold everything
+# Return:   (array) Contents of a label describing what should be entered
 augment display_all => sub
 {
    # Get args
@@ -62,7 +63,7 @@ augment display_all => sub
    # Col: English & Deutsch entries
    $table[1]->add( $self->get_alternate_field );
 
-   inner();
+   return ( inner() );
 };
 
 # Method:   set_all() {{{1
