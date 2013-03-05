@@ -31,7 +31,7 @@ use Vokab::Add;
 # Global variables {{{1
 
 my $Log = undef;                     # Log::Handler object
-my $Database_Name = "data/vokab.db"; # Local path to the DB
+my $Database_Name = "data/deutsch.db"; # Local path to the DB
 my $Database = "$Source_Path/$Database_Name";
 
 # }}}1
@@ -102,12 +102,22 @@ elsewhere for convenience.
 This program depends on the following Perl packages from CPAN:
 
   Log::Handler
-  Term::ReadKey
+  Params::Validate
   Moose
+  Moose::Util::TypeConstraints
   MooseX::FollowPBP
+  MooseX::Types
+  namespace::autoclean
   Getopt::Long
   Pod::Usage
   Gtk2
+  List::Compare
+  Data::Dumper
+  DBI
+  DBD::SQLite
+  TAP::Harness (for `make test`)
+  Test::Most (for `make test`)
+  File::Temp (for `make test`)
 
 along with the module C<PConley::Log::Setup>, from
 L<https://github.com/patrick-conley/Log-Handler-setup>.
@@ -120,18 +130,22 @@ by using a static list of words to translate, which is repeated in the same
 order on every run: run a chapter more than a few times and you end up simply
 memorizing the order of the words, not learning them.
 
-Vokab is an attempt to do better. When the program is launched, several words with
-the highest scores are displayed in English, and the user must enter their
-German translations. If the German is incorrect, the correct translation is
-shown. The score is computed based on the Wilson score; the selection criteria
-are described in detail in the internals docs: doc/word-selection.md
+Vokab is an attempt to do better. When the program is launched, several words
+with the highest scores are displayed in English, and the user must enter
+their German translations. If the German is incorrect, the correct translation
+is shown. The score is computed based on the Wilson score; the selection
+criteria are described in detail in the internals docs: doc/word-selection.md
 
 =head1 SYNOPSIS
 
-vokab [--help] [--verbose|quiet] [options]
+vokab [--help] [--verbose|quiet] [options] [add]
 
  Options:
    --help      print a brief help message and quit
    --man       print the full program description and quit
    --verbose   use verbose logging (give twice for more detail)
    --quiet     silence all log output
+   --database  name of the database to use (relative to the package's root)
+
+ Arguments:
+   add         Enter new words into the database
