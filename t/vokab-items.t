@@ -3,7 +3,7 @@ use warnings;
 use English qw/ -no-match-vars /;
 use utf8;
 
-use Test::Most tests => 376;
+use Test::Most tests => 391;
 use Gtk2 '-init';
 use File::Temp;
 
@@ -306,17 +306,13 @@ sub test_entry_field_attributes
          foreach my $key ( keys $attr->{good}->[0] )
          {
             my ( $type ) = $attr->{Gtk_type} =~ /\[(.*)]/;
-            isa_ok( $entry->{$key}, "Gtk2::$type",
-               "$attr->{name} ($key) is a Gtk2::$type" );
-            test_gtk_accessor( $entry->{$key}, $type,
+            test_gtk_attribute( $entry->{$key}, $type,
                "$attr->{name} ($key)", $attr->{good}->[0]->{$key} );
          }
       }
       else
       {
-         isa_ok( $obj->$getter, "Gtk2::$attr->{Gtk_type}", 
-            "$attr->{name} is a Gtk2::$attr->{Gtk_type}" );
-         test_gtk_accessor( $entry, $attr->{Gtk_type},
+         test_gtk_attribute( $entry, $attr->{Gtk_type},
             $attr->{name}, $attr->{good}->[0] );
       }
 
@@ -324,8 +320,8 @@ sub test_entry_field_attributes
    }
 }
 
-# Function: test_gtk_accessor {{{2
-sub test_gtk_accessor
+# Function: test_gtk_attribute {{{2
+sub test_gtk_attribute
 {
    my $gtk_obj = shift; # Gtk object whose accessors are to be tested
    my $type = shift;    # Class the object belongs to (or use ref $gtk_obj)
@@ -334,6 +330,14 @@ sub test_gtk_accessor
 
    my $getter = $Gtk_types->{$type}->{getter};
    my $setter = $Gtk_types->{$type}->{setter};
+
+   isa_ok( $gtk_obj, "Gtk2::$type" );
+
+   if ( $type eq "Entry" )
+   {
+      ok( $gtk_obj->get_activates_default,
+         "Entry field can submit via enter" );
+   }
 
    lives_ok { $gtk_obj->$setter( $value ) } "$name setter runs";
    lives_ok { $gtk_obj->$getter } "$name getter runs";

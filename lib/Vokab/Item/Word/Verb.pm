@@ -40,14 +40,21 @@ sub _build_conjugation_field
 {
    my $self = shift;
 
+   sub entry_builder
+   {
+      my $entry = Gtk2::Entry->new();
+      $entry->set_activates_default(1);
+      return $entry;
+   }
+
    my $conj = {
-      ich => Gtk2::Entry->new(),
-      du => Gtk2::Entry->new(),
-      Sie => Gtk2::Entry->new(),
-      er => Gtk2::Entry->new(),
-      wir => Gtk2::Entry->new(),
-      ihr => Gtk2::Entry->new(),
-      sie => Gtk2::Entry->new(),
+      ich => entry_builder,
+      du => entry_builder,
+      Sie => entry_builder,
+      er => entry_builder,
+      wir => entry_builder,
+      ihr => entry_builder,
+      sie => entry_builder,
    };
    return $conj;
 }
@@ -153,7 +160,7 @@ augment dump => sub
 {
    my $self = shift;
 
-   my %attrs = @$self->get_conjugation if $self->get_conjugation;
+   my %attrs = %{$self->get_conjugation} if $self->get_conjugation;
 
    return (
       %attrs,

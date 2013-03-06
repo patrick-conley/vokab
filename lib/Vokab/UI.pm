@@ -24,10 +24,6 @@ sub handle_ui_exceptions
       "close", "Gtk threw an exception:\n %s", $window_msg );
    $window->run();
    $window->destroy();
-
-   Gtk2->main_quit();
-
-   $Log->alert( "Gtk threw an exception: $msg" );
 }
 
 # Function: new_window( title => $title ) {{{1

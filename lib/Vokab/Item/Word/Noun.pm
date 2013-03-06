@@ -41,6 +41,7 @@ sub _build_gender_field
 
    my $entry = Gtk2::Entry->new_with_max_length(1);
    $entry->set_width_chars( 2 ); # 'm' is too wide for 1
+   $entry->set_activates_default(1);
    return $entry;
 }
 

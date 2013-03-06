@@ -14,6 +14,7 @@ use Log::Handler 'vokab';
 use Cwd;
 use Params::Validate;
 use Data::Dumper;
+use TryCatch;
 
 require Exporter;
 our @ISA = qw/ Exporter /;
@@ -131,7 +132,9 @@ sub run
    my $submit = Gtk2::Button->new_with_label( "Submit" );
    {
       $main_grid->pack_end( $submit, 0, 0, 0 );
-      $submit->signal_connect( clicked => \&submit_item );
+      $submit->signal_connect( clicked => \&on_submit_item );
+      $submit->set_flags( "can_default" );
+      $window->set_default( $submit );
    }
 
    # }}}2
@@ -202,26 +205,32 @@ sub draw_item_entry_box
 # Callback: on_submit_item() {{{1
 # Purpose:  When a new item's data has been entered, validate and write it.
 # Input:    
-sub submit_item
+sub on_submit_item
 {
    has_item()
       or $Log->alert( "Callback out of place: Can't submit an undefined item.");
 
    my $item = get_item();
-   $item->set_all();
+   try 
+   {
+      $item->set_all();
+   }
+   catch ( $e =~ /Attribute \(.*\) does not pass the type constraint/ )
+   {
+      Vokab::UI::handle_ui_exceptions( $e );
+      $Log->dump( warning => $e =~ s/\n.*//sr );
 
-   # TODO:
-   # After writing the item's data to the DB, call set_active_iter to
-   # reset the item class and call on_set_item_class (may have to do that
-   # explicitly).
-   # I'll need to make $combo a global (or pass it down the signal chain) and
-   # work out how to get the TreeIter corresponding to the item
-   #
-   # TODO ALSO:
-   # Verbs store each person. When testing, select one at random. Don't
-   # store individual results. Display all people with the success message
-   # after testing.
+      # Select the field that caused the error
+      my ( $e_attr ) = $e =~ /Attribute \((.*)\) does not pass/;
+      my $get = "get_${e_attr}_field";
+      $item->$get->grab_focus;
+
+      return 1;
+   }
+
+   # Create a new item, copying over field contents where appropriate
    on_set_item_class();
+   get_item->set_default_focus();
 }
 
 # }}}1

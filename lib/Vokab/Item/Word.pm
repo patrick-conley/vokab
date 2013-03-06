@@ -37,6 +37,7 @@ sub _build_en_field
    my $self = shift;
 
    my $entry = Gtk2::Entry->new();
+   $entry->set_activates_default(1);
    return $entry;
 }
 
@@ -47,6 +48,7 @@ sub _build_de_field
    my $self = shift;
 
    my $entry = Gtk2::Entry->new();
+   $entry->set_activates_default(1);
    return $entry;
 }
 
@@ -104,6 +106,14 @@ augment dump => sub
       inner()
    );
 };
+
+# Method:   set_default_focus {{{1
+# Purpose:  Set UI focus to the defualt entry field
+sub set_default_focus
+{
+   my $self = shift;
+   $self->get_en_field->grab_focus;
+}
 
 # }}}1
 

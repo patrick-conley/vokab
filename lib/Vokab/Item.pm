@@ -67,6 +67,7 @@ sub _build_chapter_field
    # Must connect the signal handler before setting the value
    $entry->signal_connect( changed => \&set_chapter_title, $self );
    $entry->set_value( $self->get_chapter ) if $self->get_chapter;
+   $entry->set_activates_default(1);
    return $entry;
 }
 
@@ -78,6 +79,7 @@ sub _build_section_field
 
    my $entry = Gtk2::Entry->new();
    $entry->set_text( $self->get_section ) if $self->get_section;
+   $entry->set_activates_default(1);
    return $entry;
 }
 
@@ -88,6 +90,7 @@ sub _build_title_field
    my $self = shift;
 
    my $entry = Gtk2::Entry->new();
+   $entry->set_activates_default(1);
    return $entry;
 }
 
@@ -219,6 +222,14 @@ sub set_chapter_title
    }
 
    return 0;
+}
+
+# Method:   set_default_focus {{{1
+# Purpose:  Set UI focus to the default entry field
+sub set_default_focus
+{
+   my $self = shift;
+   $self->get_chapter_field->grab_focus;
 }
 
 # }}}1

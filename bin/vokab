@@ -60,7 +60,12 @@ $Log->debug( "   " . "@ARGV" ) if ( @ARGV );
 # Main {{{
 
 # Set an error handler for Gtk
-Glib->install_exception_handler( \&Vokab::UI::handle_ui_exceptions );
+Glib->install_exception_handler( 
+   sub { 
+      Vokab::UI::handle_ui_exceptions( @ARG );
+      Gtk2->main_quit();
+      $Log->alert( "Gtk threw an exception: $ARG[0]" );
+   } );
 
 if ( @ARGV == 0 )
 {
@@ -118,6 +123,7 @@ This program depends on the following Perl packages from CPAN:
   TAP::Harness (for `make test`)
   Test::Most (for `make test`)
   File::Temp (for `make test`)
+  TryCatch
 
 along with the module C<PConley::Log::Setup>, from
 L<https://github.com/patrick-conley/Log-Handler-setup>.

@@ -37,6 +37,7 @@ sub _build_alternate_field
    $entry->set_tooltip_text(
       "A regex matching all possible correct answers (optional)"
    );
+   $entry->set_activates_default(1);
    return $entry;
 }
 
