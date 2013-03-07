@@ -66,6 +66,9 @@ has "section_field" => (
    init_arg => undef,
 );
 
+my $Initial_Score = 0.95;
+my $Chapter_Modifier = -0.05;
+
 # Method:   _build_chapter_field {{{1
 # Purpose:  Builder for the chapter_field attribute
 sub _build_chapter_field
@@ -216,7 +219,7 @@ sub set_all
    $self->set_class( ref $self );
    $self->set_tests( 0 );
    $self->set_success( 0 );
-   $self->set_score( 0.8 );
+   $self->set_score( $Initial_Score - $Chapter_Modifier * $self->get_chapter );
 
    inner();
 }
