@@ -7,7 +7,7 @@ use utf8;
 use 5.012;
 
 use MooseX::Types -declare => [
-   qw/ Natural IntBool Real Text OptText Gender Noun Verb EmptyStr/
+   qw/ Natural IntBool Real Text OptText Gender Noun Verb EmptyStr Section /
 ];
 
 use MooseX::Types::Moose qw/ Bool Int Num Str HashRef /;
@@ -81,6 +81,14 @@ subtype( Verb, {
       },
       message => sub { Data::Dumper::Dumper( $ARG )
          . " is not a valid Verb.\n" }
+   }
+);
+
+subtype( Section, {
+      as => HashRef[Str],
+      where => sub { $ARG->{en} && $ARG->{de} },
+      message => sub { Data::Dumper::Dumper( $ARG )
+         . " is not a valid section name. Must have keys 'en' and 'de'.\n" }
    }
 );
 

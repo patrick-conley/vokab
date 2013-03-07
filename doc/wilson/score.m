@@ -4,6 +4,7 @@ function score
 
 n_max = 20;
 p = 0.95;
+chapters=16;
 
 % compute the number of ratings at each coordinate
 for j = 1:n_max+1
@@ -24,7 +25,7 @@ score = ( phat + z.^2./2./num ...
 
 % plot the graph
 make_plot
-contour( pos, neg, abs( score ), 0.2:0.1:0.9 )
+contour( pos, neg, abs( score ), 0.95:-0.05:0.95-0.05*chapters )
 
 xlim( [ 0 n_max ] )
 ylim( [ 0 n_max ] )

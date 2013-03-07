@@ -10,7 +10,7 @@ local $Data::Dumper::Varname = '';
 local $Data::Dumper::Terse = 1;
 local $Data::Dumper::Pad = " ";
 
-use Test::Most tests => 235;
+use Test::Most tests => 271;
 
 # Note: this test script relies on the Moose class Vokab::Types::Test, not
 # Vokab::Types (which is what's actually being tested). This is so I have a
@@ -27,7 +27,7 @@ BEGIN # [1]
 
 my $obj = undef;
 
-# [59*3]
+# [69*3]
 my @type_tests = (
    # attr/type     good values            bad values
    [ 'Natural',
@@ -58,7 +58,6 @@ my @type_tests = (
         { ich => 'rufe an', du => 'rufst an', er => 'ruft an', wir => 'rufen an' },
         { ich => 'rufe an', du => 'rufst an', ihr => 'ruft an', wir => 'rufen an' },
         { ich => 'rufe an', du => 'rufst an', ihr => 'ruft an', Sie => 'rufen an' },
-        # TODO: Must test wir/sie/Sie <= infinitive separately
       ], # [5]
       [ 'a', 'bin', 1, undef, "",
         { ich => 'gehe', du => 'gehst 1', er => 'geht', wir => 'gehen' },
@@ -67,7 +66,19 @@ my @type_tests = (
         { ich => 'rufe an', er => 'ruft an', wir => 'rufen an' },
         { du => 'rufst an', er => 'ruft an', wir => 'rufen an' },
       ] # [10]
-   ]
+   ],
+   [ 'Section',
+      [  { en => 'foo', de => 'bar' },
+         { en => 1, de => 7 },
+         { en => '[!{>+<', de => '[!{]+' },
+      ], # [3]
+      [ 'a', 1, undef, "", [ 'foo', 'bar' ],
+         { en => 'foo' },
+         { en => 'foo', it => 'bar' },
+         { en => '', de => '' },
+         { en => 'foo', de => '' },
+      ] # [7]
+   ],
 );
 
 # [3] per input value

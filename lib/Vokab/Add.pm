@@ -196,8 +196,8 @@ sub draw_item_entry_box
    $Log->info( "Displaying entry window for a " . $args{class} );
 
    my $item = has_item()
-      ? $args{class}->new( dbh => $DB, get_item()->dump() )
-      : $args{class}->new( dbh => $DB );
+      ? $args{class}->new( db => $DB, get_item()->dump() )
+      : $args{class}->new( db => $DB );
    $item->display_all( box => $args{box} );
    set_item( $item );
 }

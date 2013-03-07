@@ -4,7 +4,7 @@ use English qw/ -no-match-vars/;
 use utf8;
 use 5.012;
 
-use Test::Most tests => 10;
+use Test::Most tests => 13;
 use File::Temp;
 
 BEGIN {
@@ -56,13 +56,23 @@ is_deeply( $db->readall_item_types(), [
    ],
    "->readall_item_types works" );
 
-is( $db->read_chapter_title( 0 ), undef,
-   "->read_chapter_title works (undefined chapter)" );
-
 $db->dbh->do(
    "INSERT INTO Chapters VALUES( 0, 'Introduction'), ( 1, 'Einführung' );"
 );
+
+is( $db->read_chapter_title( 2 ), undef,
+   "->read_chapter_title works (undefined chapter)" );
 is( $db->read_chapter_title( 0 ), "Introduction", 
    "->read_chapter_title works (defined chapter)" );
 is( $db->read_chapter_title( 1 ), "Einführung",
    "->read_chapter_title works (defined chapter with Unicode)" );
+
+$db->dbh->do(
+   "INSERT INTO Sections VALUES ( 'foo', 'bar' ), ( 1, 'foo' );"
+);
+is_deeply( $db->read_section( 'baz' ), undef,
+   "->read_section works (undefined section)" );
+is_deeply( $db->read_section( 'foo' ), { en => 'foo', de => 'bar' },
+   "->read_section works (defined section)" );
+is_deeply( $db->read_section( 1 ), { en => 1, de => 'foo' },
+   "->read_section works (numeric section)" );

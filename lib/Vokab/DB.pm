@@ -115,9 +115,8 @@ EOT
    # Sections {{{2
    $self->dbh->do( <<EOT
       CREATE TABLE Sections(
-         section_id INTEGER PRIMARY KEY,
-         section_en TEXT NOT NULL,
-         section_de TEXT NOT NULL
+         en TEXT PRIMARY KEY,
+         de TEXT NOT NULL
       );
 EOT
    );
@@ -136,14 +135,14 @@ EOT
       CREATE TABLE Items(
          id INTEGER PRIMARY KEY,
          chapter INTEGER,
-         section_id INTEGER,
+         section INTEGER,
          type_id INTEGER NOT NULL,
          tests INTEGER DEFAULT 0,
          successes INTEGER DEFAULT 0,
          score REAL NOT NULL,
          note TEXT,
          FOREIGN KEY(chapter) REFERENCES Chapters(chapter),
-         FOREIGN KEY(section_id) REFERENCES Sections(section_id),
+         FOREIGN KEY(section) REFERENCES Sections(en),
          FOREIGN KEY(type_id) REFERENCES Types(type_id),
          CONSTRAINT valid_tests CHECK (tests>=0),
          CONSTRAINT valid_successes CHECK (successes>=0),
@@ -202,12 +201,29 @@ EOT
 
 # }}}1
 
-# Function: readall_item_types {{{1
+# Method:   readall_item_types {{{1
 sub readall_item_types
 {
    my $self = shift;
-
    return $self->dbh->selectall_arrayref( "SELECT name, class FROM Types;" );
+}
+
+# Method:   read_section {{{1
+sub read_section
+{
+   my $self = shift;
+   my ( $en ) = Params::Validate::validate_pos( @_,
+      { type => Params::Validate::SCALAR }
+   );
+
+   state $sth = $self->dbh->prepare(
+      "SELECT en, de FROM Sections WHERE en = ?"
+   );
+   $sth->execute( $en );
+   my $val = $sth->fetchrow_hashref;
+   $sth->finish;
+
+   return $val;
 }
 
 # Function: read_chapter_title {{{1
@@ -222,8 +238,10 @@ sub read_chapter_title
       "SELECT title FROM Chapters WHERE Chapter = ?"
    );
    $sth->execute( $ch );
+   my $val = $sth->fetchrow_array;
+   $sth->finish;
 
-   return $sth->fetchall_arrayref->[0]->[0];
+   return $val;
 }
 
 # }}}1
