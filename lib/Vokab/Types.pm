@@ -7,7 +7,7 @@ use utf8;
 use 5.012;
 
 use MooseX::Types -declare => [
-   qw/ Natural IntBool Real Text OptText Gender Noun Verb EmptyStr Section /
+   qw/ Natural SemiNatural IntBool Real Text OptText Gender Noun Verb EmptyStr Section /
 ];
 
 use MooseX::Types::Moose qw/ Bool Int Num Str HashRef /;
@@ -18,6 +18,14 @@ subtype( Natural, {
       where => sub { $ARG >= 0 },
       message => sub { $ARG = defined $ARG ? $ARG : "undef";
          return "'$ARG' is not a valid natural number.\n" }
+   }
+);
+
+subtype( SemiNatural, {
+      as => Int,
+      where => sub { $ARG >= -1 },
+      message => sub { $ARG = defined $ARG ? $ARG : "undef";
+         return "'$ARG' must be an integer >= -1.\n" }
    }
 );
 

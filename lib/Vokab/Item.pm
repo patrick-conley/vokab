@@ -6,7 +6,7 @@ use English qw/ -no-match-vars/;
 use utf8;
 use 5.012;
 
-use Vokab::Types qw/Natural OptText Real Text Section /;
+use Vokab::Types qw/Natural SemiNatural Real OptText Text Section /;
 
 # A Vokab::Item is meant to be used for any testable object.
 
@@ -38,16 +38,17 @@ has( 'db' => ( # Database handler
 
 has( 'id' => ( is => 'rw', isa => Natural, init_arg => undef ) );
 has( 'class' => ( is => 'rw', isa => 'ClassName', init_arg => undef ) );
-has( 'tests' => ( is => 'rw', isa => Natural, init_arg => undef ) );
+has( 'tests' => ( is => 'rw', isa => SemiNatural, init_arg => undef ) );
 has( 'success' => ( is => 'rw', isa => Natural, init_arg => undef ) );
 has( 'score' => ( is => 'rw', isa => Real, init_arg => undef ) );
 
 has( 'chapter' => ( is => 'rw', isa => Natural ) );
 has( 'title' => ( is => 'rw', isa => Text, init_arg => undef ) );
+has( 'note' => ( is => 'rw', isa => "Str", init_arg => undef ) );
 
 has( 'section' => ( is => 'rw', isa => Section ) );
 
-foreach my $field ( qw/ chapter title / )
+foreach my $field ( qw/ chapter title note / )
 {
    has $field . "_field" => (
       is => 'ro',
@@ -113,6 +114,17 @@ sub _build_section_field
 # Method:   _build_title_field {{{1
 # Purpose:  Builder for the title_field attribute
 sub _build_title_field
+{
+   my $self = shift;
+
+   my $entry = Gtk2::Entry->new();
+   $entry->set_activates_default(1);
+   return $entry;
+}
+
+# Method:   _build_note_field {{{1
+# Purpose:  Builder for the note_field attribute
+sub _build_note_field
 {
    my $self = shift;
 
@@ -187,16 +199,27 @@ sub display_all
    $args{box}->pack_start( $label, 0, 0, 0 );
 
    # children's table
+   my $label_column;
+   my $content_column;
+
    $table = Gtk2::HBox->new();
    {
       $args{box}->add( $table );
       $table->set_homogeneous( 0 );
+
+      $label_column = Gtk2::VBox->new();
+      $content_column = Gtk2::VBox->new();
       
-      $table->pack_start( Gtk2::VBox->new(), 0, 0, 0 );
-      $table->add( Gtk2::VBox->new() );
+      $table->pack_start( $label_column, 0, 0, 0 );
+      $table->add( $content_column );
    }
 
    $label->set_text( join( "\n", inner() ) );
+
+   # Add any comments about the item
+   $label_column->add( Gtk2::Label->new( "Notes" ) );
+   $content_column->add( $self->get_note_field );
+
 }
 
 # Method:   set_all() {{{1
@@ -207,6 +230,7 @@ sub set_all
 
    $self->set_chapter( $self->get_chapter_field->get_value_as_int );
    $self->set_title( $self->get_title_field->get_text );
+   $self->set_note( $self->get_note_field->get_text );
 
    if ( $self->get_section_field->{en}->get_text )
    {
@@ -217,9 +241,9 @@ sub set_all
    }
 
    $self->set_class( ref $self );
-   $self->set_tests( 0 );
+   $self->set_tests( -1 );
    $self->set_success( 0 );
-   $self->set_score( $Initial_Score - $Chapter_Modifier * $self->get_chapter );
+   $self->set_score( $Initial_Score + $Chapter_Modifier * $self->get_chapter );
 
    inner();
 }

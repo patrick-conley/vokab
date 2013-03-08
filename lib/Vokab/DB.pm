@@ -124,8 +124,8 @@ EOT
 	# Item types {{{2
 	$self->dbh->do( <<EOT
 		CREATE TABLE Types(
-			name TEXT PRIMARY KEY,
-			class TEXT NOT NULL
+			name TEXT NOT NULL,
+			class TEXT PRIMARY KEY
 		);
 EOT
 	);
@@ -136,17 +136,14 @@ EOT
          id INTEGER PRIMARY KEY,
          chapter INTEGER,
          section INTEGER,
-         type_id INTEGER NOT NULL,
-         tests INTEGER DEFAULT 0,
-         successes INTEGER DEFAULT 0,
+         class INTEGER NOT NULL,
+         tests INTEGER,
+         successes INTEGER,
          score REAL NOT NULL,
          note TEXT,
          FOREIGN KEY(chapter) REFERENCES Chapters(chapter),
          FOREIGN KEY(section) REFERENCES Sections(en),
-         FOREIGN KEY(type_id) REFERENCES Types(type_id),
-         CONSTRAINT valid_tests CHECK (tests>=0),
-         CONSTRAINT valid_successes CHECK (successes>=0),
-         CONSTRAINT valid_score CHECK (score>=0 AND score<=1)
+         FOREIGN KEY(class) REFERENCES Types(class)
       );
 EOT
    );

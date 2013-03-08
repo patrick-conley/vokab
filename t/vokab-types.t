@@ -10,7 +10,7 @@ local $Data::Dumper::Varname = '';
 local $Data::Dumper::Terse = 1;
 local $Data::Dumper::Pad = " ";
 
-use Test::Most tests => 271;
+use Test::Most tests => 295;
 
 # Note: this test script relies on the Moose class Vokab::Types::Test, not
 # Vokab::Types (which is what's actually being tested). This is so I have a
@@ -27,10 +27,13 @@ BEGIN # [1]
 
 my $obj = undef;
 
-# [69*3]
+# [75*3]
 my @type_tests = (
    # attr/type     good values            bad values
    [ 'Natural',
+      [ 0, 56 ], # [2]
+      [ -1, -3, 0.1, undef, 'a', 'The word' ] ], # [6]
+   [ 'SemiNatural',
       [ 0, 56 ], # [2]
       [ -3, 0.1, undef, 'a', 'The word' ] ], # [5]
    [ 'IntBool',

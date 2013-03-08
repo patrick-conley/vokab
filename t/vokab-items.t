@@ -3,7 +3,7 @@ use warnings;
 use English qw/ -no-match-vars /;
 use utf8;
 
-use Test::Most tests => 397;
+use Test::Most tests => 420;
 use Gtk2 '-init';
 use File::Temp;
 use Data::Dumper;
@@ -58,9 +58,9 @@ my $data = {
             bad => [ 'foo', 'Vokab::Item::Foo' ]
          }, 
          {
-            name => 'tests', Moose_type => 'Natural', init => 0,
-            good => [ 0, 1 ],
-            bad => [ -1, 'foo' ]
+            name => 'tests', Moose_type => 'SemiNatural', init => 0,
+            good => [ 0, 1, -1 ],
+            bad => [ -2, 'foo' ]
          }, 
          {
             name => 'success', Moose_type => 'Natural', init => 0,
@@ -89,6 +89,12 @@ my $data = {
             Gtk_type => "HashRef[Entry]", Moose_type => "Section",
             good => [ { en => 'foo', de => 'bar' } ],
             bad => []
+         },
+         {
+            name => 'note', init => 0,
+            Gtk_type => "Entry", Moose_type => 'Str',
+            good => [ 'foo', 'foo 1', '' ],
+            bad => [],
          },
       ],
    },
