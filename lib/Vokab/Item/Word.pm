@@ -91,6 +91,21 @@ augment set_all => sub
    inner();
 };
 
+# Method:   write_all() {{{1
+# Purpose:  Call the DB to write a new item
+augment write_all => sub
+{
+   my $self = shift;
+
+   $self->db->write_word( 
+      id => $self->get_id,
+      en => $self->get_en,
+      de => $self->get_de
+   );
+
+   inner();
+};
+
 # Method:   dump() {{{1
 # Purpose:  Return a hash of the object's writable attributes
 augment dump => sub

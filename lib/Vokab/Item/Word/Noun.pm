@@ -91,7 +91,9 @@ augment display_all => sub
    }
 
    return ( '"en" and "de" fields should not include the article '
-      . '("the", "der", "die", or "das")', inner() );
+      . '("the", "der", "die", or "das")', 
+      'Select "display gender" if there are testable words with different
+      genders: eg., "friend" → "der Freund" or "die Freundin"', inner() );
 };
 
 # Method:   set_all() {{{1
@@ -102,6 +104,21 @@ augment set_all => sub
 
    $self->set_gender( $self->get_gender_field()->get_text() );
    $self->set_display_gender( $self->get_display_gender_field()->get_active() );
+};
+
+# Method:   write_all() {{{1
+# Purpose:  Call the DBH to write a new item
+augment write_all => sub
+{
+   my $self = shift;
+   
+   $self->db->write_noun(
+      id => $self->get_id,
+      gender => $self->get_gender,
+      display_gender => $self->get_display_gender
+   );
+
+   inner();
 };
 
 # Method:   dump() {{{1

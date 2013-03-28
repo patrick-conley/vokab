@@ -77,6 +77,15 @@ augment set_all => sub
    inner();
 };
 
+# Method:   write_all() {{{1
+# Purpose:  Call the DBH to write a new item
+augment write_all => sub
+{
+   my $self = shift;
+   $self->db->write_generic( alternate => $self->get_alternate );
+
+   inner();
+};
 # Method:   dump() {{{1
 # Purpose:  Return a hash of the object's writable attributes
 augment dump => sub

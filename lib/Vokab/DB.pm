@@ -11,6 +11,8 @@ use 5.012;
 use DBI;
 use Log::Handler 'vokab';
 use Gtk2;
+use TryCatch;
+use Data::Dumper;
 
 use Moose;
 use MooseX::FollowPBP;
@@ -58,16 +60,9 @@ sub _init_dbh
 
    $dbh->{sqlite_unicode} = 1;
 	$dbh->do( "PRAGMA foreign_keys = ON" );
+   $dbh->{sqlite_see_if_its_a_number} = 1;
 
 	return $dbh;
-}
-
-# Method:   destructor {{{1
-sub DEMOLISH
-{
-   my $self = shift;
-
-   $self->dbh->disconnect() if ( defined $self->dbh );
 }
 
 # Handler:  handle_db_exceptions() {{{1
@@ -116,7 +111,7 @@ EOT
    $self->dbh->do( <<EOT
       CREATE TABLE Sections(
          en TEXT PRIMARY KEY,
-         de TEXT NOT NULL
+         de TEXT UNIQUE NOT NULL
       );
 EOT
    );
@@ -125,6 +120,7 @@ EOT
 	$self->dbh->do( <<EOT
 		CREATE TABLE Types(
 			name TEXT NOT NULL,
+         tablename TEXT NOT NULL,
 			class TEXT PRIMARY KEY
 		);
 EOT
@@ -138,7 +134,7 @@ EOT
          section INTEGER,
          class INTEGER NOT NULL,
          tests INTEGER,
-         successes INTEGER,
+         success INTEGER,
          score REAL NOT NULL,
          note TEXT,
          FOREIGN KEY(chapter) REFERENCES Chapters(chapter),
@@ -169,29 +165,31 @@ EOT
       );
 EOT
    );
-	$self->dbh->do( "INSERT INTO Types VALUES('Noun','Vokab::Item::Word::Noun')" );
+	$self->dbh->do( "INSERT INTO Types VALUES('Noun', 'Nouns', 'Vokab::Item::Word::Noun')" );
 
    # Verb words {{{2
    $self->dbh->do( <<EOT
       CREATE TABLE Verbs(
          id INTEGER,
-         person TEXT,
+         s1 TEXT, s2 TEXT, s3 TEXT,
+         p1 TEXT, p2 TEXT, p3 TEXT,
+         f2 TEXT,
          FOREIGN KEY(id) REFERENCES Items(id)
       );
 EOT
    );
-	$self->dbh->do( "INSERT INTO Types VALUES('Verb','Vokab::Item::Word::Verb')" );
+	$self->dbh->do( "INSERT INTO Types VALUES('Verb', 'Verbs', 'Vokab::Item::Word::Verb')" );
 
    # Generic words {{{2
    $self->dbh->do( <<EOT
-      CREATE TABLE Generic(
+      CREATE TABLE Generics(
          id INTEGER,
          alternate TEXT,
          FOREIGN KEY(id) REFERENCES Items(id)
       );
 EOT
    );
-	$self->dbh->do( "INSERT INTO Types VALUES('Generic','Vokab::Item::Word::Generic')" );
+	$self->dbh->do( "INSERT INTO Types VALUES('Generic', 'Generics', 'Vokab::Item::Word::Generic')" );
 
    # }}}2
 }
@@ -213,17 +211,16 @@ sub read_section
       { type => Params::Validate::SCALAR }
    );
 
-   state $sth = $self->dbh->prepare(
+   my $sth = $self->dbh->prepare(
       "SELECT en, de FROM Sections WHERE en = ?"
    );
    $sth->execute( $en );
    my $val = $sth->fetchrow_hashref;
-   $sth->finish;
 
    return $val;
 }
 
-# Function: read_chapter_title {{{1
+# Method:   read_chapter_title {{{1
 sub read_chapter_title
 {
    my $self = shift;
@@ -231,14 +228,206 @@ sub read_chapter_title
       { type => Params::Validate::SCALAR, regex => qr/^\d+$/ }
    );
 
-   state $sth = $self->dbh->prepare(
+   my $sth = $self->dbh->prepare(
       "SELECT title FROM Chapters WHERE Chapter = ?"
    );
    $sth->execute( $ch );
    my $val = $sth->fetchrow_array;
-   $sth->finish;
 
    return $val;
+}
+
+# }}}1
+
+# FIXME: writing methods MUST use transactions and roll back on error
+# disable autocommit and start/commit in Vokab::Add
+# Method:   write_chapter( chapter => $$, title => $$ ) {{{1
+# Purpose:  Add a new chapter to the DB
+sub write_chapter
+{
+   my $self = shift;
+   my %args = Params::Validate::validate( @_, {
+         chapter => { type => Params::Validate::SCALAR, regex => qr/^\d+$/ },
+         title => { type => Params::Validate::SCALAR },
+      } );
+
+   $self->log->info( "Writing chapter ".
+      Data::Dumper::Dumper( %args )
+      . " to the DB" );
+
+   my $sth = $self->dbh->prepare(
+      "INSERT INTO Chapters ( chapter, title ) VALUES ( ?, ? );"
+   );
+
+   try
+   {
+      $sth->execute( $args{chapter}, $args{title} );
+   }
+   catch ( $e =~ /PRIMARY KEY must be unique/ )
+   {
+      $self->log->debug( "Chapter $args{chapter} already exists in the DB."
+         . " Continuing" );
+   }
+}
+
+# Method:   write_section( en => $$, de => $$ ) {{{1
+# Purpose:  Add a new section to the DB
+sub write_section
+{
+   my $self = shift;
+   my %args = Params::Validate::validate( @_, {
+         en => { type => Params::Validate::SCALAR },
+         de => { type => Params::Validate::SCALAR },
+      } );
+
+   $self->log->info( "Writing section ".
+      Data::Dumper::Dumper( %args )
+      . " to the DB" );
+
+   my $sth = $self->dbh->prepare(
+      "INSERT INTO Sections ( en, de ) VALUES ( ?, ? );"
+   );
+
+   try
+   {
+      $sth->execute( $args{en}, $args{de} );
+   }
+   catch ( $e =~ /PRIMARY KEY must be unique/ )
+   {
+      $self->log->debug( "Section $args{en} already exists in the DB."
+         . " Continuing" );
+   }
+}
+
+# Method:   id = write_item( class => $$, chapter => $$, section => $$, {{{1 
+#                       note => $$, tests => $$, success => $$, score => $$ ) 
+# Purpose:  Add a new item to the DB
+sub write_item
+{
+   my $self = shift;
+   my %args = Params::Validate::validate( @_, {
+         class => { type => Params::Validate::SCALAR },
+         chapter => { type => Params::Validate::SCALAR },
+         section => { type => Params::Validate::SCALAR },
+         note => { type => Params::Validate::SCALAR },
+         tests => { type => Params::Validate::SCALAR },
+         success => { type => Params::Validate::SCALAR },
+         score => { type => Params::Validate::SCALAR },
+      } );
+
+   $self->log->info( "Writing item ".
+      Data::Dumper::Dumper( %args )
+      . " to the DB" );
+
+   my $sth = $self->dbh->prepare(
+      "INSERT INTO Items ( class, chapter, section, note, tests, success, score )"
+      . " VALUES ( ?, ?, ?, ?, ?, ?, ? );"
+   );
+
+   $sth->execute( $args{class}, $args{chapter}, $args{section},
+      $args{note}, $args{tests}, $args{success}, $args{score}
+   );
+   
+   my $id = $self->dbh->sqlite_last_insert_rowid();
+   $self->log->debug( "Wrote item to table row $id" );
+   return $id
+
+}
+
+# Method:   write_word( id => $$, en => $$, de => $$ ) {{{1
+# Purpose:  Add a new word to the DB
+sub write_word
+{
+   my $self = shift;
+   my %args = Params::Validate::validate( @_, {
+         id => { type => Params::Validate::SCALAR },
+         en => { type => Params::Validate::SCALAR },
+         de => { type => Params::Validate::SCALAR },
+      } );
+
+   $self->log->info( "Writing word ".
+      Data::Dumper::Dumper( %args )
+      . " to the DB" );
+
+   my $sth = $self->dbh->prepare(
+      "INSERT INTO Words ( id, en, de ) VALUES ( ?, ?, ? );"
+   );
+
+   $sth->execute( $args{id}, $args{en}, $args{de} );
+}
+
+# Method:   write_noun( id => $$, gender => $$, display_gender => $$ ) {{{1
+# Purpose:  Add a new noun to the DB
+sub write_noun
+{
+   my $self = shift;
+   my %args = Params::Validate::validate( @_, {
+         id => { type => Params::Validate::SCALAR },
+         gender => { type => Params::Validate::SCALAR },
+         display_gender => { type => Params::Validate::SCALAR },
+      } );
+
+   $self->log->info( "Writing noun ".
+      Data::Dumper::Dumper( %args )
+      . " to the DB" );
+
+   my $sth = $self->dbh->prepare(
+      "INSERT INTO Nouns ( id, gender, display_gender ) VALUES ( ?, ?, ? );"
+   );
+
+   $sth->execute( $args{id}, $args{gender}, $args{display_gender} );
+}
+
+# Method:   write_verb( id => $$, conjugation ) {{{1
+# Purpose:  Add a new verb to the DB
+sub write_verb
+{
+   my $self = shift;
+   my %args = Params::Validate::validate( @_, {
+         id => { type => Params::Validate::SCALAR },
+         ich => { type => Params::Validate::SCALAR },
+         du => { type => Params::Validate::SCALAR },
+         er => { type => Params::Validate::SCALAR },
+         Sie => { type => Params::Validate::SCALAR },
+         wir => { type => Params::Validate::SCALAR },
+         ihr => { type => Params::Validate::SCALAR },
+         sie => { type => Params::Validate::SCALAR },
+      } );
+
+   $self->log->info( "Writing verb ".
+      Data::Dumper::Dumper( %args )
+      . " to the DB" );
+
+   my $sth = $self->dbh->prepare(
+      "INSERT INTO Verbs ( id, s1, s2, s3, p1, p2, p3, f2 ) "
+      . "VALUES ( ?, ?, ?, ?, ?, ?, ?, ? );"
+   );
+
+   $sth->execute( $args{id},
+      $args{ich}, $args{du}, $args{er},
+      $args{wir}, $args{ihr}, $args{sie}, $args{Sie},
+   );
+}
+
+# Method:   write_generic( id => $$, alternate => $$ ) {{{1
+# Purpose:  Add a new generic to the DB
+sub write_generic
+{
+   my $self = shift;
+   my %args = Params::Validate::validate( @_, {
+         id => { type => Params::Validate::SCALAR },
+         alternate => { type => Params::Validate::SCALAR },
+      } );
+
+   $self->log->info( "Writing generic word ".
+      Data::Dumper::Dumper( %args )
+      . " to the DB" );
+
+   my $sth = $self->dbh->prepare(
+      "INSERT INTO Generics ( id, alternate ) VALUES ( ?, ? );"
+   );
+
+   $sth->execute( $args{id}, $args{alternate} );
 }
 
 # }}}1

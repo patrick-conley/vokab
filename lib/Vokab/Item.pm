@@ -248,6 +248,36 @@ sub set_all
    inner();
 }
 
+# Method:   write_all() {{{1
+# Purpose:  Call the DBH to write a new item
+sub write_all
+{
+   my $self = shift;
+
+   $self->db->write_chapter(
+      chapter => $self->get_chapter,
+      title => $self->get_title
+   );
+
+   $self->db->write_section(
+      en => $self->get_section->{en},
+      de => $self->get_section->{de}
+   );
+
+   my $id = $self->db->write_item( 
+      class => $self->get_class,
+      chapter => $self->get_chapter,
+      section => $self->get_section->{en},
+      note => $self->get_note,
+      tests => $self->get_tests,
+      success => $self->get_success,
+      score => $self->get_score,
+   );
+   $self->set_id( $id );
+
+   inner();
+}
+
 # Method:   dump() {{{1
 # Purpose:  Return a hash of the object's writable attributes
 sub dump
