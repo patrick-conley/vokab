@@ -331,7 +331,9 @@ sub on_set_section_field
 {
    my ( $en_field, $self ) = @ARG;
 
-   my $section = $self->db->read_section( $en_field->get_text );
+   my $section = $self->db->read_section( 
+      chapter => $self->get_chapter_field->get_value_as_int,
+      en => $en_field->get_text );
    if ( $section->{en} )
    {
       $self->log->info( "Section "

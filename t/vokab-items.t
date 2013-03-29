@@ -7,6 +7,7 @@ use Test::Most tests => 420;
 use Gtk2 '-init';
 use File::Temp;
 use Data::Dumper;
+use Carp;
 
 use Vokab::DB;
 
@@ -177,7 +178,7 @@ my $data = {
 # Purpose:  A fallback from the default, GUI exception handler.
 sub handle_exceptions_fallback
 {
-   die shift;
+   confess shift;
 }
 # }}}2
 
@@ -655,7 +656,7 @@ foreach my $class ( keys %$data )
 {
 
    $Dbh->dbh->do(
-      "INSERT INTO Sections VALUES ('foo', 'bar'), ( 1, 2 );"
+      "INSERT INTO Sections (chapter, en, de) VALUES (0, 'foo', 'bar'), ( 1, 1, 2 );"
    );
 
    my $obj = Vokab::Item->new( db => $Dbh );
@@ -666,14 +667,18 @@ foreach my $class ( keys %$data )
    ok( $obj->get_section_field->{en}->get_sensitive,
       "Item::section->{de} can be edited" );
 
-   lives_ok { $obj->get_section_field->{en}->set_text( "foo" ) }
+   lives_ok { 
+      $obj->get_chapter_field->set_value( 0 );
+      $obj->get_section_field->{en}->set_text( "foo" ) }
       "Item->set_section->{en} callback runs (known section)";
    is( $obj->get_section_field->{de}->get_text, "bar",
       "Item::section->{de} is properly set" );
    ok( $obj->get_section_field->{en}->get_sensitive,
       "Item::section->{de} cannot be edited" );
 
-   lives_ok { $obj->get_section_field->{en}->set_text( 1 ) }
+   lives_ok { 
+      $obj->get_chapter_field->set_value( 1 );
+      $obj->get_section_field->{en}->set_text( 1 ) }
       "Item->set_section->{en} callback runs (numeric section)";
    is( $obj->get_section_field->{de}->get_text, 2,
       "Item::section->{de} is properly set" );

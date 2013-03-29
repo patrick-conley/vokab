@@ -110,8 +110,11 @@ EOT
    # Sections {{{2
    $self->dbh->do( <<EOT
       CREATE TABLE Sections(
-         en TEXT PRIMARY KEY,
-         de TEXT UNIQUE NOT NULL
+         chapter INTEGER,
+         en TEXT NOT NULL,
+         de TEXT NOT NULL,
+         FOREIGN KEY (chapter) REFERENCES Chapters(chapter),
+         PRIMARY KEY (chapter,en)
       );
 EOT
    );
@@ -137,8 +140,7 @@ EOT
          success INTEGER,
          score REAL NOT NULL,
          note TEXT,
-         FOREIGN KEY(chapter) REFERENCES Chapters(chapter),
-         FOREIGN KEY(section) REFERENCES Sections(en),
+         FOREIGN KEY(chapter,section) REFERENCES Sections(chapter,en),
          FOREIGN KEY(class) REFERENCES Types(class)
       );
 EOT
@@ -207,14 +209,15 @@ sub readall_item_types
 sub read_section
 {
    my $self = shift;
-   my ( $en ) = Params::Validate::validate_pos( @_,
-      { type => Params::Validate::SCALAR }
-   );
+   my %args = Params::Validate::validate( @_, {
+         en => { type => Params::Validate::SCALAR },
+         chapter => { type => Params::Validate::SCALAR },
+      } );
 
    my $sth = $self->dbh->prepare(
-      "SELECT en, de FROM Sections WHERE en = ?"
+      "SELECT chapter, en, de FROM Sections WHERE en = ? AND chapter = ?"
    );
-   $sth->execute( $en );
+   $sth->execute( $args{en}, $args{chapter} );
    my $val = $sth->fetchrow_hashref;
 
    return $val;
@@ -263,14 +266,14 @@ sub write_chapter
    {
       $sth->execute( $args{chapter}, $args{title} );
    }
-   catch ( $e =~ /PRIMARY KEY must be unique/ )
+   catch( $err where { $_ =~ /PRIMARY KEY must be unique/ } )
    {
       $self->log->debug( "Chapter $args{chapter} already exists in the DB."
          . " Continuing" );
    }
 }
 
-# Method:   write_section( en => $$, de => $$ ) {{{1
+# Method:   write_section( en => $$, de => $$, chapter => $$ ) {{{1
 # Purpose:  Add a new section to the DB
 sub write_section
 {
@@ -278,6 +281,7 @@ sub write_section
    my %args = Params::Validate::validate( @_, {
          en => { type => Params::Validate::SCALAR },
          de => { type => Params::Validate::SCALAR },
+         chapter => { type => Params::Validate::SCALAR },
       } );
 
    $self->log->info( "Writing section ".
@@ -285,17 +289,17 @@ sub write_section
       . " to the DB" );
 
    my $sth = $self->dbh->prepare(
-      "INSERT INTO Sections ( en, de ) VALUES ( ?, ? );"
+      "INSERT INTO Sections ( chapter, en, de ) VALUES ( ?, ?, ? );"
    );
 
    try
    {
-      $sth->execute( $args{en}, $args{de} );
+      $sth->execute( $args{chapter}, $args{en}, $args{de} );
    }
-   catch ( $e =~ /PRIMARY KEY must be unique/ )
+   catch( $err where { $_ =~ /columns? [, \w]* (is|are) not unique/ } )
    {
-      $self->log->debug( "Section $args{en} already exists in the DB."
-         . " Continuing" );
+      $self->log->debug( "Section $args{chapter}/$args{en} already exists in"
+         . " the DB. Continuing" );
    }
 }
 

@@ -4,10 +4,9 @@ use English qw/ -no-match-vars/;
 use utf8;
 use 5.012;
 
-use Test::Most tests => 47;
+use Test::Most tests => 48;
 use File::Temp;
 use Carp;
-use Data::Dumper;
 
 BEGIN {
    bail_on_fail();
@@ -18,8 +17,8 @@ BEGIN {
 my %data = (
    chapter => { write => { chapter => 2, title => 'chapter' },
                 read => { chapter => 2, title => 'chapter' } },
-   section => { write => { en => 'en', de => 'de' },
-                read => { en => 'en', de => 'de' } },
+   section => { write => { en => 'en', de => 'de', chapter => 2 },
+                read => { en => 'en', de => 'de', chapter => 2 } },
    item =>    { write => { note => 'note', tests => -1, success => 0,
                            score => 0.95, chapter => 2, section => 'en' },
                 read => { note => 'note', tests => -1, success => 0,
@@ -157,7 +156,6 @@ throws_ok { $db->create_db } qr/table \w* already exists/,
    
 # Test reading functions [9] {{{1
 
-die_on_fail();
 # readall_item_types [3] {{{2
 is_deeply( $db->readall_item_types(), [
       [ 'Noun', 'Vokab::Item::Word::Noun' ],
@@ -178,18 +176,23 @@ is( $db->read_chapter_title( 0 ), "Introduction",
 is( $db->read_chapter_title( 1 ), "Einführung",
    "->read_chapter_title works (defined chapter with Unicode)" );
 
-# read_section [3] {{{2
+# read_section [4] {{{2
 $db->dbh->do(
-   "INSERT INTO Sections VALUES ( 'foo', 'bar' ), ( 1, 'foo' );"
+   "INSERT INTO Sections( chapter, en, de ) "
+   . "VALUES ( 1, 'foo', 'bar' ), ( 0, 1, 'foo');"
 );
-is_deeply( $db->read_section( 'baz' ), undef,
-   "->read_section works (undefined section)" );
-is_deeply( $db->read_section( 'foo' ), { en => 'foo', de => 'bar' },
+
+is_deeply( $db->read_section( chapter => 1, en => 'baz' ), undef,
+   "->read_section returns nothing (undefined section)" );
+is_deeply( $db->read_section( chapter => 2, en => 'foo' ), undef,
+   "->read_section returns nothing (defined section, wrong chapter)" );
+is_deeply( $db->read_section( chapter => 1, en => 'foo' ),
+   { en => 'foo', de => 'bar', chapter => 1 },
    "->read_section works (defined section)" );
-is_deeply( $db->read_section( 1 ), { en => 1, de => 'foo' },
+is_deeply( $db->read_section( chapter => 0, en => 1 ),
+   { en => 1, de => 'foo', chapter => 0 },
    "->read_section works (numeric section)" );
 # }}}2
-restore_fail();
 
 # Test writing functions {{{1
 
@@ -217,7 +220,7 @@ restore_fail();
       $db->dbh->selectrow_hashref(
          "select * from Chapters where chapter = $data{chapter}->{read}->{chapter}" ),
       $data{chapter}->{write},
-      "->write_chapter works" );
+      "->write_chapter works on duplicate keys" );
 }
 
 # write_section [4] {{{2
@@ -225,23 +228,46 @@ restore_fail();
    $db = Vokab::DB->new( dbname => (File::Temp::tempfile())[1],
       error_handler => \&handle_exceptions_fallback );
    $db->create_db;
+   $db->write_chapter( %{$data{chapter}->{write}} );
 
    # good section succeeds
    lives_ok { $db->write_section( %{$data{section}->{write}} ) }
       "->write_section runs";
    is_deeply( $db->dbh->selectrow_hashref(
-         "select * from Sections where en = $data{section}->{read}->{en}" ),
+         "SELECT * FROM Sections"
+         . " WHERE en = '$data{section}->{read}->{en}'"
+         . " AND chapter = '$data{section}->{read}->{chapter}'" ),
       $data{section}->{write},
       "->write_section works" );
 
    # bad section fails cleanly
    lives_ok { $db->write_section( en => $data{section}->{write}->{en},
+                                  chapter => $data{section}->{write}->{chapter},
                                   de => "duplicate" ) }
       "->write_section exits cleanly on duplicate keys";
    is_deeply( $db->dbh->selectrow_hashref(
-         "select * from Sections where en = $data{section}->{read}->{en}" ),
+         "SELECT * FROM Sections"
+         . " WHERE en = '$data{section}->{read}->{en}'"
+         . " AND chapter = '$data{section}->{read}->{chapter}'" ),
       $data{section}->{write},
       "->write_section doesn't clobber on duplicate keys" );
+
+   # similar section in a different chapter succeeds
+   lives_ok {
+      $db->write_chapter( chapter => 3, title => 'foo' );
+      $db->write_section( chapter => 3,
+                          en => $data{section}->{write}->{en},
+                          de => $data{section}->{write}->{de} )
+      }
+      "->write_section runs with similar section in different chapter";
+   is_deeply( $db->dbh->selectrow_hashref(
+         "SELECT * FROM Sections"
+         . " WHERE en = '$data{section}->{read}->{en}'"
+         . " AND chapter = 3" ),
+      { chapter => 3,
+         en => $data{section}->{read}->{en},
+         de => $data{section}->{read}->{de} },
+      "->write_section works with similar section in different chapter" );
 }
 
 # write_item & write_word [3] {{{2
@@ -331,7 +357,7 @@ restore_fail();
       dies_ok { $db->write_noun( id => $id, gender => 'f', 
                                   display_gender => 0 ) }
          "->write_noun fails identical nouns with the same gender";
-   }
+   };
 
    # slightly different item succeeds
    lives_ok { $db->write_noun( id => $id, gender => 'f', 
