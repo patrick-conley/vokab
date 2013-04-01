@@ -228,7 +228,6 @@ EOT
       CREATE TABLE Nouns(
          id INTEGER NOT NULL,
          gender TEXT,
-         display_gender INTEGER,
          FOREIGN KEY (id) REFERENCES Items(id),
          PRIMARY KEY (id)
       );
@@ -437,7 +436,7 @@ sub write_word
    $sth->execute( $args{id}, $args{en}, $args{de} );
 }
 
-# Method:   write_noun( id => $$, gender => $$, display_gender => $$ ) {{{1
+# Method:   write_noun( id => $$, gender => $$ ) {{{1
 # Purpose:  Add a new noun to the DB
 sub write_noun
 {
@@ -445,7 +444,6 @@ sub write_noun
    my %args = Params::Validate::validate( @_, {
          id => { type => Params::Validate::SCALAR },
          gender => { type => Params::Validate::SCALAR },
-         display_gender => { type => Params::Validate::SCALAR },
       } );
 
    $self->log->info( "Writing noun ".
@@ -461,9 +459,9 @@ sub write_noun
 
    # write the item
    my $sth = $self->dbh->prepare(
-      "INSERT INTO Nouns ( id, gender, display_gender ) VALUES ( ?, ?, ? );"
+      "INSERT INTO Nouns ( id, gender ) VALUES ( ?, ? );"
    );
-   $sth->execute( $args{id}, $args{gender}, $args{display_gender} );
+   $sth->execute( $args{id}, $args{gender} );
 }
 
 # Method:   write_verb( id => $$, conjugation ) {{{1

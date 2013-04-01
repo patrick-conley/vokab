@@ -3,7 +3,7 @@ use warnings;
 use English qw/ -no-match-vars /;
 use utf8;
 
-use Test::Most tests => 420;
+use Test::Most tests => 402;
 use Gtk2 '-init';
 use File::Temp;
 use Data::Dumper;
@@ -124,12 +124,6 @@ my $data = {
             Gtk_type => "Entry", Moose_type => 'Gender',
             good => [ 'm', 'f', 'n' ],
             bad => [ 1, undef, 'a', 'e' ]
-         },
-         {
-            name => 'display_gender', init => 0,
-            Gtk_type => "CheckButton", Moose_type => 'Bool',
-            good => [ '', 1 ],
-            bad => []
          },
          {
             name => 'en', init => 0,

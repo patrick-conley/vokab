@@ -10,7 +10,7 @@ local $Data::Dumper::Varname = '';
 local $Data::Dumper::Terse = 1;
 local $Data::Dumper::Pad = " ";
 
-use Test::Most tests => 295;
+use Test::Most tests => 298;
 
 # Note: this test script relies on the Moose class Vokab::Types::Test, not
 # Vokab::Types (which is what's actually being tested). This is so I have a
@@ -49,7 +49,7 @@ my @type_tests = (
       [ 'a', 'The word', "", "it's", 'foo-bar' ], # [6]
       [ '1', 'word 1', '& things', '-', undef ] ], # [4]
    [ 'Gender',
-      [ 'm', 'n', 'f' ], # [4]
+      [ 'm', 'n', 'f', 'p' ], # [5]
       [ 'a', 'The word', undef, 2, "", 'masculine' ] ], # [5]
    [ 'Noun',
       [ 'a', 'word', 'Übersetzungen' ], # [3]

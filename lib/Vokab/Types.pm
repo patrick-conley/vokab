@@ -65,10 +65,10 @@ subtype( OptText, {
 
 subtype( Gender, {
       as => Str,
-      where => sub { $ARG =~ /^[fmn]$/ },
+      where => sub { $ARG =~ /^[fmnp]$/ },
       message => sub { $ARG = defined $ARG ? $ARG : "undef";
-         return "'$ARG' is not a gender."
-            . " Value must be (m)asculine, (f)eminine, or (n)euter.\n" }
+         return "'$ARG' is not a gender. Value must be"
+         . " (m)asculine, (f)eminine, (n)euter, or (p)lural.\n" }
    }
 );
 

@@ -25,8 +25,8 @@ my %data = (
                           score => 0.95, chapter => 2, section => 'en' } },
    word =>    { write => { en => 'en', de => 'de' },
                 read => { en => 'en', de => 'de' } },
-   noun =>    { write => { gender => 'm', display_gender => 1 },
-                read => { gender => 'm', display_gender => 1 } },
+   noun =>    { write => { gender => 'm' },
+                read => { gender => 'm' } },
    verb =>    { write => { ich => 'bin', du => 'bist', er => 'ist',
                            wir => 'sind', ihr => 'sein', sie => 'sind',
                            Sie => 'sind' },
@@ -335,7 +335,7 @@ $db->dbh->do( "insert into Types(name, tablename, class) values "
    lives_ok {
       $id = $db->write_item( %{$data{item}->{write}}, class => "Vokab::Item::Word::Noun" );
       $db->write_word( id => $id, en => $data{word}->{write}->{en}, de => "gender differs" );
-      $db->write_noun( id => $id, gender => 'f', display_gender => 1 )
+      $db->write_noun( id => $id, gender => 'f' )
       }
       "->write_noun allows two nouns only differing in gender";
 }

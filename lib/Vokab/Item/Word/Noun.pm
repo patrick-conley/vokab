@@ -18,11 +18,10 @@ use Moose;
 extends 'Vokab::Item::Word';
 
 has( 'gender'         => ( is => 'rw', isa => Gender, init_arg => undef ) );
-has( 'display_gender' => ( is => 'rw', isa => Bool, init_arg => undef ) );
 has( '+en'             => ( isa => Noun ) );
 has( '+de'             => ( isa => Noun ) );
 
-foreach my $field ( qw/ gender display_gender / )
+foreach my $field ( qw/ gender / )
 {
    has $field . "_field" => (
       is => 'ro',
@@ -42,18 +41,6 @@ sub _build_gender_field
    my $entry = Gtk2::Entry->new_with_max_length(1);
    $entry->set_width_chars( 2 ); # 'm' is too wide for 1
    $entry->set_activates_default(1);
-   return $entry;
-}
-
-# Method:   _build_display_gender_field {{{1
-# Purpose:  Builder for the display_gender_field attribute
-sub _build_display_gender_field
-{
-   my $self = shift;
-
-   my $entry = Gtk2::CheckButton->new("Display gender?");
-   $entry->set_tooltip_text( "Set whether to display the item's gender in a "
-      . "quiz (appropriate for multi-gendered items, eg.  Freund/Freundin)" );
    return $entry;
 }
 
@@ -87,7 +74,6 @@ augment display_all => sub
    {
       $table[1]->add( $row );
       $row->pack_start( $self->get_gender_field, 0, 0, 0 ); # Don't expand
-      $row->add( $self->get_display_gender_field );
    }
 
    return ( '"en" and "de" fields should not include the article '
@@ -103,7 +89,6 @@ augment set_all => sub
    my $self = shift;
 
    $self->set_gender( $self->get_gender_field()->get_text() );
-   $self->set_display_gender( $self->get_display_gender_field()->get_active() );
 };
 
 # Method:   write_all() {{{1
@@ -115,7 +100,6 @@ augment write_all => sub
    $self->db->write_noun(
       id => $self->get_id,
       gender => $self->get_gender,
-      display_gender => $self->get_display_gender
    );
 
    inner();
@@ -129,7 +113,6 @@ augment dump => sub
 
    return (
       gender => $self->get_gender,
-      display_gender => $self->get_display_gender
    );
 };
 
