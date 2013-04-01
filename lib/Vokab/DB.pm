@@ -43,6 +43,18 @@ has 'log' => ( is => 'ro', # Log::Handler object for debugging output
                isa => 'Log::Handler'
              );
 
+foreach my $st ( qw/ get_name_from_class get_class_from_id get_ambig_noun get_ambig_verb get_ambig_generic / )
+{
+   has "${st}_st" => (
+      is => 'ro',
+      lazy => 1,
+      reader => "${st}_st",
+      init_arg => undef,
+      isa => 'DBI::st',
+      builder => "_build_${st}_st",
+   );
+}
+
 # }}}1
 
 # Method:   _init_dbh {{{1
@@ -59,10 +71,59 @@ sub _init_dbh
       } ) or $self->log->alert( $DBI::errstr );
 
    $dbh->{sqlite_unicode} = 1;
-	$dbh->do( "PRAGMA foreign_keys = ON" );
+   $dbh->do( "PRAGMA foreign_keys = ON" );
    $dbh->{sqlite_see_if_its_a_number} = 1;
 
-	return $dbh;
+   return $dbh;
+}
+
+# Method:   _build_get_class_from_id_st {{{1
+# Purpose:  Prepare a statement to get the class of an item id
+sub _build_get_class_from_id_st
+{
+   my $self = shift;
+   return $self->dbh->prepare( "SELECT class FROM Items WHERE id = ?" );
+}
+
+# Method:   _build_get_name_from_class_st {{{1
+# Purpose:  Prepare a statement to get the class of a class's name
+sub _build_get_name_from_class_st
+{
+   my $self = shift;
+   return $self->dbh->prepare( "SELECT class FROM Types WHERE name = ?" );
+}
+
+# Method:   _build_get_ambig_noun_st {{{1
+# Purpose:  Prepare a statement to identify nouns with matched 'en', 'gender'
+sub _build_get_ambig_noun_st
+{
+   my $self = shift;
+   return $self->dbh->prepare(
+      "SELECT * FROM Words JOIN Nouns USING (id)"
+      . " WHERE en = (SELECT en FROM Words WHERE id = ?) AND gender = ?"
+   );
+}
+
+# Method:   _build_get_ambig_verb_st {{{1
+# Purpose:  Prepare a statement to identify verbs with matched 'en'
+sub _build_get_ambig_verb_st
+{
+   my $self = shift;
+   return $self->dbh->prepare(
+      "SELECT * FROM Words JOIN Verbs USING (id)"
+      . " WHERE en = (SELECT en FROM Words WHERE id = ?)"
+   );
+}
+
+# Method:   _build_get_ambig_generic_st {{{1
+# Purpose:  Prepare a statement to identify generics with matched 'en'
+sub _build_get_ambig_generic_st
+{
+   my $self = shift;
+   return $self->dbh->prepare(
+      "SELECT * FROM Words JOIN Generics USING (id)"
+      . " WHERE en = (SELECT en FROM Words WHERE id = ?)"
+   );
 }
 
 # Handler:  handle_db_exceptions() {{{1
@@ -101,8 +162,9 @@ sub create_db
    # Chapters {{{2
    $self->dbh->do( <<EOT
       CREATE TABLE Chapters(
-         chapter INTEGER PRIMARY KEY,
-         title TEXT NOT NULL
+         chapter INTEGER,
+         title TEXT NOT NULL,
+         PRIMARY KEY (chapter)
       );
 EOT
    );
@@ -119,29 +181,31 @@ EOT
 EOT
    );
 
-	# Item types {{{2
-	$self->dbh->do( <<EOT
-		CREATE TABLE Types(
-			name TEXT NOT NULL,
+   # Item types {{{2
+   $self->dbh->do( <<EOT
+      CREATE TABLE Types(
+         name TEXT UNIQUE NOT NULL,
          tablename TEXT NOT NULL,
-			class TEXT PRIMARY KEY
-		);
+         class TEXT,
+         PRIMARY KEY (class)
+      );
 EOT
-	);
+   );
 
    # Items {{{2
    $self->dbh->do( <<EOT
       CREATE TABLE Items(
-         id INTEGER PRIMARY KEY,
+         id INTEGER,
          chapter INTEGER,
-         section INTEGER,
+         section TEXT,
          class INTEGER NOT NULL,
          tests INTEGER,
          success INTEGER,
          score REAL NOT NULL,
          note TEXT,
-         FOREIGN KEY(chapter,section) REFERENCES Sections(chapter,en),
-         FOREIGN KEY(class) REFERENCES Types(class)
+         FOREIGN KEY (chapter,section) REFERENCES Sections(chapter,en),
+         FOREIGN KEY (class) REFERENCES Types(class),
+         PRIMARY KEY (id)
       );
 EOT
    );
@@ -149,10 +213,12 @@ EOT
    # Word items {{{2
    $self->dbh->do( <<EOT
       CREATE TABLE Words(
-         id INTEGER,
+         id INTEGER NOT NULL,
          en TEXT NOT NULL,
          de TEXT NOT NULL,
-         FOREIGN KEY(id) REFERENCES Items(id)
+         FOREIGN KEY (id) REFERENCES Items(id),
+         PRIMARY KEY (id),
+         UNIQUE (en,de)
       );
 EOT
    );
@@ -160,38 +226,41 @@ EOT
    # Noun words {{{2
    $self->dbh->do( <<EOT
       CREATE TABLE Nouns(
-         id INTEGER,
+         id INTEGER NOT NULL,
          gender TEXT,
          display_gender INTEGER,
-         FOREIGN KEY(id) REFERENCES Items(id)
+         FOREIGN KEY (id) REFERENCES Items(id),
+         PRIMARY KEY (id)
       );
 EOT
    );
-	$self->dbh->do( "INSERT INTO Types VALUES('Noun', 'Nouns', 'Vokab::Item::Word::Noun')" );
+   $self->dbh->do( "INSERT INTO Types VALUES('Noun', 'Nouns', 'Vokab::Item::Word::Noun')" );
 
    # Verb words {{{2
    $self->dbh->do( <<EOT
       CREATE TABLE Verbs(
-         id INTEGER,
+         id INTEGER NOT NULL,
          s1 TEXT, s2 TEXT, s3 TEXT,
          p1 TEXT, p2 TEXT, p3 TEXT,
          f2 TEXT,
-         FOREIGN KEY(id) REFERENCES Items(id)
+         FOREIGN KEY (id) REFERENCES Items(id),
+         PRIMARY KEY (id)
       );
 EOT
    );
-	$self->dbh->do( "INSERT INTO Types VALUES('Verb', 'Verbs', 'Vokab::Item::Word::Verb')" );
+   $self->dbh->do( "INSERT INTO Types VALUES('Verb', 'Verbs', 'Vokab::Item::Word::Verb')" );
 
    # Generic words {{{2
    $self->dbh->do( <<EOT
       CREATE TABLE Generics(
-         id INTEGER,
+         id INTEGER NOT NULL,
          alternate TEXT,
-         FOREIGN KEY(id) REFERENCES Items(id)
+         FOREIGN KEY (id) REFERENCES Items(id),
+         PRIMARY KEY (id)
       );
 EOT
    );
-	$self->dbh->do( "INSERT INTO Types VALUES('Generic', 'Generics', 'Vokab::Item::Word::Generic')" );
+   $self->dbh->do( "INSERT INTO Types VALUES('Generic', 'Generics', 'Vokab::Item::Word::Generic')" );
 
    # }}}2
 }
@@ -323,6 +392,10 @@ sub write_item
       Data::Dumper::Dumper( %args )
       . " to the DB" );
 
+   # check the item's class
+   $args{class} =~ /^Vokab::Item/
+      or die "Useless attempt to write Item data for a $args{class} object";
+
    my $sth = $self->dbh->prepare(
       "INSERT INTO Items ( class, chapter, section, note, tests, success, score )"
       . " VALUES ( ?, ?, ?, ?, ?, ?, ? );"
@@ -332,6 +405,7 @@ sub write_item
       $args{note}, $args{tests}, $args{success}, $args{score}
    );
    
+   # Get the item's ID
    my $id = $self->dbh->sqlite_last_insert_rowid();
    $self->log->debug( "Wrote item to table row $id" );
    return $id
@@ -353,10 +427,13 @@ sub write_word
       Data::Dumper::Dumper( %args )
       . " to the DB" );
 
+   # check the item has the right class
+   $self->_check_new_item( id => $args{id}, class => "Vokab::Item::Word" );
+
+   # write the item
    my $sth = $self->dbh->prepare(
       "INSERT INTO Words ( id, en, de ) VALUES ( ?, ?, ? );"
    );
-
    $sth->execute( $args{id}, $args{en}, $args{de} );
 }
 
@@ -375,10 +452,17 @@ sub write_noun
       Data::Dumper::Dumper( %args )
       . " to the DB" );
 
+   # check there are no nouns in the DB with the same 'en' and gender
+   $self->_check_new_item(
+      id => $args{id}, 
+      class => "Vokab::Item::Word::Noun",
+      args => [ $args{id}, $args{gender} ],
+   );
+
+   # write the item
    my $sth = $self->dbh->prepare(
       "INSERT INTO Nouns ( id, gender, display_gender ) VALUES ( ?, ?, ? );"
    );
-
    $sth->execute( $args{id}, $args{gender}, $args{display_gender} );
 }
 
@@ -402,11 +486,18 @@ sub write_verb
       Data::Dumper::Dumper( %args )
       . " to the DB" );
 
+   # check there are no verbs in the DB with the same 'en'
+   $self->_check_new_item(
+      id => $args{id}, 
+      class => "Vokab::Item::Word::Verb",
+      args => [ $args{id} ],
+   );
+
+   # write the item
    my $sth = $self->dbh->prepare(
       "INSERT INTO Verbs ( id, s1, s2, s3, p1, p2, p3, f2 ) "
       . "VALUES ( ?, ?, ?, ?, ?, ?, ?, ? );"
    );
-
    $sth->execute( $args{id},
       $args{ich}, $args{du}, $args{er},
       $args{wir}, $args{ihr}, $args{sie}, $args{Sie},
@@ -427,11 +518,56 @@ sub write_generic
       Data::Dumper::Dumper( %args )
       . " to the DB" );
 
+   # check there are no generics in the DB with the same 'en'
+   $self->_check_new_item(
+      id => $args{id}, 
+      class => "Vokab::Item::Word::Generic",
+      args => [ $args{id} ],
+   );
+
+   # write the item
    my $sth = $self->dbh->prepare(
       "INSERT INTO Generics ( id, alternate ) VALUES ( ?, ? );"
    );
-
    $sth->execute( $args{id}, $args{alternate} );
+}
+
+# Method:   _check_new_item( id => $$, class => $$, message => $$ ) {{{1
+# Purpose:  Check the item's id has the appropriate class, and that this item
+#           won't introduce any ambiguities in parent tables
+sub _check_new_item
+{
+   my $self = shift;
+   my %args = Params::Validate::validate( @_, {
+         id => { type => Params::Validate::SCALAR, regex => qr/^\d*$/ },
+         class => { type => Params::Validate::SCALAR },
+         args => { type => Params::Validate::ARRAYREF, optional => 1 },
+      } );
+
+   my $name;
+
+   # Get the correct name of the class
+   my $sth = $self->get_name_from_class_st;
+   $sth->execute( $args{class} );
+   ( $name ) = $sth->fetchrow_array || ( $args{class} =~ /::(\w*)$/ );
+
+   # Check the expected class is correct
+   $sth = $self->get_class_from_id_st;
+   $sth->execute( $args{id} );
+   my $class = $sth->fetchrow_array;
+   $class =~ /$args{class}/
+      or die "Useless attempt to write $name data for a $class object";
+
+   # Check there are no potential ambiguities in the data
+   if ( defined $args{args} )
+   {
+      my $get_st = "get_ambig_" . lc $name . "_st";
+      my $sth = $self->$get_st;
+      $sth->execute( @{$args{args}} );
+      my $match = $sth->fetchrow_hashref;
+      !defined $match
+         or die "Ambiguous $name definition with " . Data::Dumper::Dumper( $match );
+   }
 }
 
 # }}}1

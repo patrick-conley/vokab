@@ -4,7 +4,7 @@ use English qw/ -no-match-vars/;
 use utf8;
 use 5.012;
 
-use Test::Most tests => 48;
+use Test::Most tests => 49;
 use File::Temp;
 use Carp;
 
@@ -73,34 +73,22 @@ sub test_class
       "SELECT tablename, class FROM Types WHERE name = '$classname'" );
 
    # Get ancestors of the class
-   my @ancestors = $class =~ /::(\w*)::/g;
+   my @ancestors = $class =~ /:(\w+):/g;
    shift @ancestors;
 
-   my ( $db, $id );
+   my $id;
 
-   # Create a new database
+   # Write ancestor data
    lives_ok {
-      $db = Vokab::DB->new( dbname => (File::Temp::tempfile())[1],
-         error_handler => \&handle_exceptions_fallback );
-      $db->create_db;
-
-      # Write data necessary to satisfy foreign key constraints
-      $db->dbh->do( "insert into Types(name, tablename, class) values "
-         . "('foo_item', 'foo_items', 'Vokab::Item::Foo'), "
-         . "('foo_word', 'foo_words', 'Vokab::Item::Word::Foo');" );
-      $db->write_chapter( %{$data{chapter}->{write}} );
-      $db->write_section( %{$data{section}->{write}} );
-
       # Write the Vokab::Item data
       $id = $db->write_item( %{$data{item}->{write}}, class => $class );
 
       # Write Vokab::Item::*:: data
-      foreach my $ancestor ( @ancestors )
+      if ( $ancestors[0] eq "Word" )
       {
-         my $writer = "write_" . lc $ancestor;
-         $db->$writer( id => $id, %{$data{lc $ancestor}->{write}} );
+         $db->write_word( id => $id, en => $data{word}->{write}->{en}, de => "$id" );
       }
-   } "Setup works";
+   } " $classname setup works";
 
    my $writer = "write_" . lc $classname;
 
@@ -195,13 +183,16 @@ is_deeply( $db->read_section( chapter => 0, en => 1 ),
 # }}}2
 
 # Test writing functions {{{1
+$db = Vokab::DB->new( dbname => (File::Temp::tempfile())[1],
+   error_handler => \&handle_exceptions_fallback );
+$db->create_db;
+
+$db->dbh->do( "insert into Types(name, tablename, class) values "
+   . "('foo_item', 'foo_items', 'Vokab::Item::Foo'), "
+   . "('foo_word', 'foo_words', 'Vokab::Item::Word::Foo');" );
 
 # write_chapter [4] {{{2
 {
-   $db = Vokab::DB->new( dbname => (File::Temp::tempfile())[1],
-      error_handler => \&handle_exceptions_fallback );
-   $db->create_db;
-
    # good chapter succeeds
    lives_ok { $db->write_chapter( %{$data{chapter}->{write}} ) }
       "->write_chapter runs";
@@ -225,10 +216,6 @@ is_deeply( $db->read_section( chapter => 0, en => 1 ),
 
 # write_section [4] {{{2
 {
-   $db = Vokab::DB->new( dbname => (File::Temp::tempfile())[1],
-      error_handler => \&handle_exceptions_fallback );
-   $db->create_db;
-   $db->write_chapter( %{$data{chapter}->{write}} );
 
    # good section succeeds
    lives_ok { $db->write_section( %{$data{section}->{write}} ) }
@@ -275,14 +262,6 @@ is_deeply( $db->read_section( chapter => 0, en => 1 ),
 # valid classname
 {
    my ( $id, $class );
-
-   # Create a new database
-   $db = Vokab::DB->new( dbname => (File::Temp::tempfile())[1],
-      error_handler => \&handle_exceptions_fallback );
-   $db->create_db;
-   $db->write_chapter( %{$data{chapter}->{write}} );
-   $db->write_section( %{$data{section}->{write}} );
-
    $class = "Vokab::Item::Word::Noun";
 
    die_on_fail();
@@ -309,15 +288,19 @@ is_deeply( $db->read_section( chapter => 0, en => 1 ),
 
    # slightly different word succeeds
    lives_ok {
-      $db->write_word( id => $id, en => $data{word}->{write}->{en}, de => 'differs' ),
+      $id = $db->write_item( %{$data{item}->{write}}, class => $class );
+      $db->write_word( id => $id, en => $data{word}->{write}->{en}, de => 'share en' ),
       }
       "->write_word allows several words to share 'en'";
 
    restore_fail();
 
    # duplicate word fails
-   throws_ok { $db->write_word( id => $id, %{$data{word}->{write}} ) }
-      qr/is not unique/,
+   throws_ok { 
+      $id = $db->write_item( %{$data{item}->{write}}, class => $class );
+      $db->write_word( id => $id, %{$data{word}->{write}} )
+      }
+      qr/columns? [, \w]* (is|are) not unique/,
       "->write_word fails on items with identical en/de pairs";
 
    # writing word for a non-Word item fails
@@ -325,13 +308,10 @@ is_deeply( $db->read_section( chapter => 0, en => 1 ),
       $db->dbh->selectall_arrayref( "SELECT class FROM Types" );
    $class = "Vokab::Item::Foo";
 
-   $db->dbh->do( "insert into Types(name, tablename, class) values "
-      . "('foo_item', 'foo_items', 'Vokab::Item::Foo'), "
-      . "('foo_word', 'foo_words', 'Vokab::Item::Word::Foo');" );
-
    throws_ok { 
       $id = $db->write_item( %{$data{item}->{write}}, class => $class ); 
-      $db->write_word( id => $id, %{$data{word}->{write}} )
+      $db->write_word( id => $id,
+         en => $data{word}->{write}->{en}, de => 'wrong class' )
       }
       qr/Useless attempt to write Word data for a $class object/,
       "->write_word fails when its Vokab::Item parent is not a word";
@@ -345,23 +325,18 @@ is_deeply( $db->read_section( chapter => 0, en => 1 ),
    # too-similar item fails
    throws_ok {
       $id = $db->write_item( %{$data{item}->{write}}, class => "Vokab::Item::Word::Noun" );
-      $db->write_word( id => $id, en => $data{word}->{write}->{en}, de => "differs" );
+      $db->write_word( id => $id, en => $data{word}->{write}->{en}, de => "same gender" );
       $db->write_noun( id => $id, %{$data{noun}->{write}} )
    }
-      qr/Ambigious noun definition: \("en", "gender"\) pair is not unique/,
+      qr/Ambiguous Noun definition/,
       "->write_noun fails if two items have the same 'en' and 'gender'";
 
-   # similar item fails unless display_gender is true
-   TODO: {
-      local $TODO = "display_gender should be set implicitly";
-      dies_ok { $db->write_noun( id => $id, gender => 'f', 
-                                  display_gender => 0 ) }
-         "->write_noun fails identical nouns with the same gender";
-   };
-
    # slightly different item succeeds
-   lives_ok { $db->write_noun( id => $id, gender => 'f', 
-                               display_gender => 1 ) }
+   lives_ok {
+      $id = $db->write_item( %{$data{item}->{write}}, class => "Vokab::Item::Word::Noun" );
+      $db->write_word( id => $id, en => $data{word}->{write}->{en}, de => "gender differs" );
+      $db->write_noun( id => $id, gender => 'f', display_gender => 1 )
+      }
       "->write_noun allows two nouns only differing in gender";
 }
 
@@ -377,7 +352,7 @@ is_deeply( $db->read_section( chapter => 0, en => 1 ),
       $db->write_verb( id => $id,
          ich => 'habe', du => 'hast', er => 'hat', Sie => 'haben',
          wir => 'haben', ihr => 'hat', sie => 'haben' ) }
-      qr/Ambigious verb definition: "en" is not unique/,
+      qr/Ambiguous Verb definition/,
       "->write_verb fails if two items have the same 'en'";
 }
 
@@ -389,10 +364,10 @@ is_deeply( $db->read_section( chapter => 0, en => 1 ),
    # similar generics fail
    throws_ok {
       $id = $db->write_item( %{$data{item}->{write}}, class => "Vokab::Item::Word::Generic" );
-      $db->write_word( id => $id, en => $data{word}->{write}->{en}, de => "differs" );
+      $db->write_word( id => $id, en => $data{word}->{write}->{en}, de => "dup generic" );
       $db->write_generic( id => $id, %{$data{generic}->{write}} )
       }
-      qr/Ambiguous generic definition: "en" is not unique/,
+      qr/Ambiguous Generic definition/,
       "->write_generic fails if two items have the same 'en'";
 }
 
