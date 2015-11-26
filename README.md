@@ -1,3 +1,5 @@
+Warning: this project is abandoned and probably non-functional.
+
 # Name
 
 vokab: A study tool for German vocabulary, using weighted (random?) selection
